@@ -1,0 +1,45 @@
+╭─ omajot ───────────────────╮╭─ All notes · 25 ─────────────────────────╮╭─ preview ──────────────────────────────────────────────────────────────────────────╮
+│    All notes          25  ││   Welcome to omajot 👋                  ││ Notes  ·  4m ago  #omajot                                                          │
+│    Pinned              2  ││  4m ago  omajot keeps your notes in mar  ││                                                                                    │
+│    Notes               3  ││                                          ││ Welcome to omajot 👋                                                               │
+│ FOLDERS                    ││   Groceries                             ││ ━━━━━━━━━━━━━━━━━━━━                                                               │
+│    Home                4  ││  38m ago  Oat milk                       ││                                                                                    │
+│      Garden            2  ││                                          ││ omajot keeps your notes in markdown, on all your devices, and syncs them through   │
+│    Work                   ││  Weekend plans                           ││ your own hub.                                                                      │
+│      Projects          3  ││  yesterday  Farmers market, Saturday 9:  ││                                                                                    │
+│      Meetings          3  ││                                          ││  Open omajot from the bar                                                         │
+│    Travel              3  ││  Lisbon in October                       ││  Press n for a new note                                                           │
+│    Recipes             4  ││  yesterday  Flights                      ││  Scan the QR code with your phone                                                 │
+│    Ideas               3  ││                                          ││  Add omajot to your home screen                                                   │
+│ TAGS                       ││  Project Lighthouse: kickoff             ││                                                                                    │
+│    #1on1               1  ││  2d ago  Goal: collect the sensor data   ││ The first line of a note is its title. Words like #omajot become tags. Paste an    │
+│    #api                1  ││                                          ││ image and it becomes an attachment.                                                │
+│    #baking             1  ││  Release checklist                       ││                                                                                    │
+│    #coffee             1  ││  3d ago  Changelog                       ││ Read more: omajot on GitHub                                                        │
+│    #family             2  ││                                          ││                                                                                    │
+│    #garden             2  ││  Packing list                            ││                                                                                    │
+│    #idea               1  ││  4d ago  Passport                        ││                                                                                    │
+│    #lighthouse         3  ││                                          ││                                                                                    │
+│    #lisbon             1  ││  Lighthouse API sketch                   ││                                                                                    │
+│    #markdown           1  ││  6d ago  One reading as it arrives from  ││                                                                                    │
+│    #meeting            2  ││                                          ││                                                                                    │
+│    #omajot             2  ││  Shortcuts I keep forgetting             ││                                                                                    │
+│    #omarchy            1  ││  7d ago                                  ││                                                                                    │
+│    #planning           1  ││                                          ││                                                                                    │
+│    #quick              1  ││  Shakshuka                               ││                                                                                    │
+│    #quotes             1  ││  8d ago  For two people, 25 minutes.     ││                                                                                    │
+│    #reading            1  ││                                          ││                                                                                    │
+│    #recipe             2  ││  Tomato beds                             ││                                                                                    │
+│    #release            1  ││  9d ago  The new layout for spring. Fou  ││                                                                                    │
+│    #shopping           1  ││                                          ││                                                                                    │
+│    #travel             3  ││  Weekly sync                             ││                                                                                    │
+│    #vegetarian         1  ││  10d ago  Present: Mia, Jonas, Priya, m  ││                                                                                    │
+│                            ││                                          ││                                                                                    │
+│    Trash               1  ││  Markdown tour                           ││                                                                                    │
+│                            ││  12d ago  A quick look at what the prev  ││                                                                                    │
+│                            ││                                          ││                                                                                    │
+│                            ││  Books to read                           ││                                                                                    │
+│                            ││  13d ago  The Pragmatic Programmer       ││                                                                                    │
+│                            ││                                          ││                                                                                    │
+╰────────────────────────────╯╰──────────────────────────────────────────╯╰────────────────────────────────────────────────────────────────────────────────────╯
+ ● Synced (mock)                                                                                j/k move · h/l column · / search · e edit · d/u scroll · q quit 

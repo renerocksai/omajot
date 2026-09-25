@@ -1,0 +1,30 @@
+╭─ All notes · 25 ─────────────────────╮╭─ preview ────────────────────────────────────────────────╮
+│   Welcome to omajot 👋              ││ Travel  ·  yesterday  #travel  #lisbon                   │
+│  4m ago  omajot keeps your notes in  ││                                                          │
+│                                      ││ Lisbon in October                                        │
+│   Groceries                         ││ ━━━━━━━━━━━━━━━━━                                        │
+│  38m ago  Oat milk                   ││                                                          │
+│                                      ││   Tram 28  (this terminal shows no pictures)            │
+│  Weekend plans                       ││                                                          │
+│  yesterday  Farmers market, Saturda  ││ │ Day │ Plan                             │               │
+│                                      ││ ├─────┼──────────────────────────────────┤               │
+│  Lisbon in October                   ││ │ Thu │ Arrive, walk through Alfama      │               │
+│  yesterday  Flights                  ││ │ Fri │ Tram 28, Castelo de São Jorge    │               │
+│                                      ││ │ Sat │ Belém: tower, monastery, pastéis │               │
+│  Project Lighthouse: kickoff         ││ │ Sun │ LX Factory, flight home 18:40    │               │
+│  2d ago  Goal: collect the sensor d  ││                                                          │
+│                                      ││  Flights                                                │
+│  Release checklist                   ││  Hotel                                                  │
+│  3d ago  Changelog                   ││  Book the castle tickets                                │
+│                                      ││                                                          │
+│  Packing list                        ││ #travel #lisbon                                          │
+│  4d ago  Passport                    ││                                                          │
+│                                      ││                                                          │
+│  Lighthouse API sketch               ││                                                          │
+│  6d ago  One reading as it arrives   ││                                                          │
+│                                      ││                                                          │
+│  Shortcuts I keep forgetting         ││                                                          │
+│  7d ago                              ││                                                          │
+│                                      ││                                                          │
+╰──────────────────────────────────────╯╰──────────────────────────────────────────────────────────╯
+ ● Synced (mock)                    j/k move · h/l column · / search · e edit · d/u scroll · q quit 

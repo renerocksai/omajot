@@ -1,0 +1,45 @@
+╭─ omajot ───────────────────╮╭─ All notes · 25 ─────────────────────────╮╭─ preview ──────────────────────────────────────────────────────────────────────────╮
+│    All notes          25  ││   Welcome to omajot 👋                  ││ Travel  ·  yesterday  #travel  #lisbon                                             │
+│    Pinned              2  ││  4m ago  omajot keeps your notes in mar  ││                                                                                    │
+│    Notes               3  ││                                          ││ Lisbon in October                                                                  │
+│ FOLDERS                    ││   Groceries                             ││ ━━━━━━━━━━━━━━━━━                                                                  │
+│    Home                4  ││  38m ago  Oat milk                       ││                                                                                    │
+│      Garden            2  ││                                          ││   Tram 28  (this terminal shows no pictures)                                      │
+│    Work                   ││  Weekend plans                           ││                                                                                    │
+│      Projects          3  ││  yesterday  Farmers market, Saturday 9:  ││ │ Day │ Plan                             │                                         │
+│      Meetings          3  ││                                          ││ ├─────┼──────────────────────────────────┤                                         │
+│    Travel              3  ││  Lisbon in October                       ││ │ Thu │ Arrive, walk through Alfama      │                                         │
+│    Recipes             4  ││  yesterday  Flights                      ││ │ Fri │ Tram 28, Castelo de São Jorge    │                                         │
+│    Ideas               3  ││                                          ││ │ Sat │ Belém: tower, monastery, pastéis │                                         │
+│ TAGS                       ││  Project Lighthouse: kickoff             ││ │ Sun │ LX Factory, flight home 18:40    │                                         │
+│    #1on1               1  ││  2d ago  Goal: collect the sensor data   ││                                                                                    │
+│    #api                1  ││                                          ││  Flights                                                                          │
+│    #baking             1  ││  Release checklist                       ││  Hotel                                                                            │
+│    #coffee             1  ││  3d ago  Changelog                       ││  Book the castle tickets                                                          │
+│    #family             2  ││                                          ││                                                                                    │
+│    #garden             2  ││  Packing list                            ││ #travel #lisbon                                                                    │
+│    #idea               1  ││  4d ago  Passport                        ││                                                                                    │
+│    #lighthouse         3  ││                                          ││                                                                                    │
+│    #lisbon             1  ││  Lighthouse API sketch                   ││                                                                                    │
+│    #markdown           1  ││  6d ago  One reading as it arrives from  ││                                                                                    │
+│    #meeting            2  ││                                          ││                                                                                    │
+│    #omajot             2  ││  Shortcuts I keep forgetting             ││                                                                                    │
+│    #omarchy            1  ││  7d ago                                  ││                                                                                    │
+│    #planning           1  ││                                          ││                                                                                    │
+│    #quick              1  ││  Shakshuka                               ││                                                                                    │
+│    #quotes             1  ││  8d ago  For two people, 25 minutes.     ││                                                                                    │
+│    #reading            1  ││                                          ││                                                                                    │
+│    #recipe             2  ││  Tomato beds                             ││                                                                                    │
+│    #release            1  ││  9d ago  The new layout for spring. Fou  ││                                                                                    │
+│    #shopping           1  ││                                          ││                                                                                    │
+│    #travel             3  ││  Weekly sync                             ││                                                                                    │
+│    #vegetarian         1  ││  10d ago  Present: Mia, Jonas, Priya, m  ││                                                                                    │
+│                            ││                                          ││                                                                                    │
+│    Trash               1  ││  Markdown tour                           ││                                                                                    │
+│                            ││  12d ago  A quick look at what the prev  ││                                                                                    │
+│                            ││                                          ││                                                                                    │
+│                            ││  Books to read                           ││                                                                                    │
+│                            ││  13d ago  The Pragmatic Programmer       ││                                                                                    │
+│                            ││                                          ││                                                                                    │
+╰────────────────────────────╯╰──────────────────────────────────────────╯╰────────────────────────────────────────────────────────────────────────────────────╯
+ ● Synced (mock)                                                                                j/k move · h/l column · / search · e edit · d/u scroll · q quit 

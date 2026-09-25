@@ -1,0 +1,20 @@
+╭─ All notes · 25 ─────────────────────────────────────────╮
+│   Welcome to omajot 👋                                  │
+│  4m ago  omajot keeps your notes in markdown, on all yo  │
+│                                                          │
+│   Groceries                                             │
+│  38m ago  Oat milk                                       │
+│                                                          │
+│  Weekend plans                                           │
+│  yesterday  Farmers market, Saturday 9:00                │
+│                                                          │
+│  Lisbon in October                                       │
+│  yesterday  Flights                                      │
+│                                                          │
+│  Project Lighthouse: kickoff                             │
+│  2d ago  Goal: collect the sensor data from all sites a  │
+│                                                          │
+│                                                          │
+│                                                          │
+╰──────────────────────────────────────────────────────────╯
+j/k move · h/l column · / search · e edit · d/u scroll · q q

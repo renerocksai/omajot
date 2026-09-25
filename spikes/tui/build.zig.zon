@@ -1,0 +1,13 @@
+.{
+    .name = .omajot_tui_spike,
+    .version = "0.0.0",
+    .fingerprint = 0x1fef18439bc5d11b,
+    .minimum_zig_version = "0.16.0",
+    .dependencies = .{
+        .vaxis = .{
+            .url = "https://github.com/rockorager/libvaxis/archive/173a890d1394946b5d7623c66cd34bcd36d8eeb8.tar.gz",
+            .hash = "vaxis-0.6.0-BWNV_OybDABnzf12gCPzy_IgAjkKkonDJF-2O_7XyLtD",
+        },
+    },
+    .paths = .{ "build.zig", "build.zig.zon", "src" },
+}

@@ -1,0 +1,45 @@
+╭─ omajot ───────────────────╮╭─ All notes · 25 ─────────────────────────╮╭─ preview ──────────────────────────────────────────────────────────────────────────╮
+│    All notes          25  ││   Grüße aus Köln 🇩🇪                     ││ Notes  ·  4m ago  #grüße                                                           │
+│    Pinned              2  ││  4m ago  Ärger über Straßenbahn, 日本語  ││                                                                                    │
+│    Notes               3  ││                                          ││ Grüße aus Köln 🇩🇪                                                                  │
+│ FOLDERS                    ││   Groceries                             ││ ━━━━━━━━━━━━━━━━━                                                                  │
+│    Home                4  ││  38m ago  Oat milk                       ││                                                                                    │
+│      Garden            2  ││                                          ││ Ärger über Straßenbahn, 日本語 und 👨‍👩‍👧 Familie.                                 │    
+│    Work                   ││  Weekend plans                           ││                                                                                    │
+│      Projects          3  ││  yesterday  Farmers market, Saturday 9:  ││ │ Wort  │ Bedeutung    │                                                           │
+│      Meetings          3  ││                                          ││ ├───────┼──────────────┤                                                           │
+│    Travel              3  ││  Lisbon in October                       ││ │ Grüße │ greetings 👋 │                                                           │
+│    Recipes             4  ││  yesterday  Flights                      ││ │ 日本  │ Japan        │                                                           │
+│    Ideas               3  ││                                          ││                                                                                    │
+│ TAGS                       ││  Project Lighthouse: kickoff             ││  Brötchen kaufen                                                                  │
+│    #1on1               1  ││  2d ago  Goal: collect the sensor data   ││                                                                                    │
+│    #api                1  ││                                          ││ #grüße                                                                             │
+│    #baking             1  ││  Release checklist                       ││                                                                                    │
+│    #coffee             1  ││  3d ago  Changelog                       ││                                                                                    │
+│    #family             2  ││                                          ││                                                                                    │
+│    #garden             2  ││  Packing list                            ││                                                                                    │
+│    #grüße              1  ││  4d ago  Passport                        ││                                                                                    │
+│    #idea               1  ││                                          ││                                                                                    │
+│    #lighthouse         3  ││  Lighthouse API sketch                   ││                                                                                    │
+│    #lisbon             1  ││  6d ago  One reading as it arrives from  ││                                                                                    │
+│    #markdown           1  ││                                          ││                                                                                    │
+│    #meeting            2  ││  Shortcuts I keep forgetting             ││                                                                                    │
+│    #omajot             1  ││  7d ago                                  ││                                                                                    │
+│    #omarchy            1  ││                                          ││                                                                                    │
+│    #planning           1  ││  Shakshuka                               ││                                                                                    │
+│    #quick              1  ││  8d ago  For two people, 25 minutes.     ││                                                                                    │
+│    #quotes             1  ││                                          ││                                                                                    │
+│    #reading            1  ││  Tomato beds                             ││                                                                                    │
+│    #recipe             2  ││  9d ago  The new layout for spring. Fou  ││                                                                                    │
+│    #release            1  ││                                          ││                                                                                    │
+│    #shopping           1  ││  Weekly sync                             ││                                                                                    │
+│    #travel             3  ││  10d ago  Present: Mia, Jonas, Priya, m  ││                                                                                    │
+│    #vegetarian         1  ││                                          ││                                                                                    │
+│                            ││  Markdown tour                           ││                                                                                    │
+│    Trash               1  ││  12d ago  A quick look at what the prev  ││                                                                                    │
+│                            ││                                          ││                                                                                    │
+│                            ││  Books to read                           ││                                                                                    │
+│                            ││  13d ago  The Pragmatic Programmer       ││                                                                                    │
+│                            ││                                          ││                                                                                    │
+╰────────────────────────────╯╰──────────────────────────────────────────╯╰────────────────────────────────────────────────────────────────────────────────────╯
+ ● Synced (mock)                                                                                j/k move · h/l column · / search · e edit · d/u scroll · q quit 

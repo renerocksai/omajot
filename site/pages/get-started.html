@@ -51,7 +51,29 @@
   <p>On Windows (experimental), download <code>omajot-x86_64-windows.exe</code> from the <a href="https://github.com/renerocksai/omajot/releases">releases</a>. The Windows binary builds on the IOCP backend of bounded/http. We did not run it as a hub yet.</p>
   <p>Replace <code>you@example.com</code> with your Tailscale login name. The Tailscale admin console shows it on the <em>Users</em> page. The hub accepts API requests only from this login.</p>
   <p>The hub listens on <code>127.0.0.1</code> only. It writes all changes to <code>~/omajot-data/batches.jsonl</code> and all images to <code>~/omajot-data/blobs/</code>. Include this folder in your backups.</p>
-  <div class="note"><p>Detach from tmux with <kbd>Ctrl</kbd>+<kbd>b</kbd> <kbd>d</kbd>. The hub continues to run. A start at boot (launchd or systemd) is not part of omajot yet.</p></div>
+  <p>The <code>tmux</code> line is optional. tmux keeps the hub running when you close the terminal window. You can also use another tool for this, or keep a terminal window open.</p>
+  <details id="tmux">
+    <summary>tmux: install it, detach, and come back later</summary>
+    <p><strong>Install tmux</strong> if your computer does not have it:</p>
+    <div class="table"><table>
+      <tr><th>Computer</th><th>Command</th></tr>
+      <tr><td>Omarchy</td><td>tmux is installed already</td></tr>
+      <tr><td>Other Arch Linux</td><td><code>sudo pacman -S tmux</code></td></tr>
+      <tr><td>Debian, Ubuntu</td><td><code>sudo apt install tmux</code></td></tr>
+      <tr><td>macOS</td><td><code>brew install tmux</code> (this needs <a href="https://brew.sh">Homebrew</a>)</td></tr>
+      <tr><td>Windows</td><td>There is no tmux. Keep the window with the hub open, for example minimized.</td></tr>
+    </table></div>
+    <p><strong>Use it:</strong></p>
+    <div class="table"><table>
+      <tr><th>To do this</th><th>Do this</th></tr>
+      <tr><td>Start a session with a name</td><td><code>tmux new -s omajot-hub</code>, then start the hub in it</td></tr>
+      <tr><td>Leave the session. The hub continues to run.</td><td>Press <kbd>Ctrl</kbd>+<kbd>b</kbd>, release, then press <kbd>d</kbd> ("detach")</td></tr>
+      <tr><td>Show the sessions</td><td><code>tmux ls</code></td></tr>
+      <tr><td>Go back to the hub, also from another computer over SSH</td><td><code>tmux attach -t omajot-hub</code></td></tr>
+      <tr><td>Stop the hub</td><td>Go back to the session, press <kbd>Ctrl</kbd>+<kbd>c</kbd>, then type <code>exit</code></td></tr>
+    </table></div>
+    <p>A tmux session ends when the computer restarts. After a restart, start the hub again. A start at boot (launchd or systemd) is not part of omajot yet.</p>
+  </details>
 </section>
 
 <section id="tailscale">

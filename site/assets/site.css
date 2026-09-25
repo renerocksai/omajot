@@ -175,3 +175,10 @@ kbd { font: 13px var(--mono); padding: 1px 7px; border: 1px solid var(--line); b
   .terminal .qr { font-size: 7.5px }
 }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto } .btn:hover { transform: none } }
+
+/* Optional detail, collapsed: <details><summary>…</summary>…</details> */
+details { border: 1px solid var(--line); border-radius: 12px; background: var(--card); padding: 0 18px; margin: 18px 0 }
+details[open] { padding-bottom: 6px }
+summary { cursor: pointer; font-weight: 650; padding: 13px 0; list-style-position: outside }
+summary:hover { color: var(--accent-ink) }
+details .table { margin: 10px 0 16px }

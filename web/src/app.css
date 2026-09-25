@@ -32,17 +32,17 @@
   :root {
     --accent: #ffd60a;
     --accent-strong: #ffd60a;
-    --bg: #1c1c1e;
-    --bg-side: #121214;
-    --bg-card: #1c1c1e;
-    --bg-elev: #2c2c2e;
+    --bg: #161a20;
+    --bg-side: #0f1318;
+    --bg-card: #161a20;
+    --bg-elev: #222831;
     --bg-hover: rgba(255, 255, 255, 0.05);
     --bg-sel: #5a4a12;
-    --bg-sel-muted: #3a3a3c;
+    --bg-sel-muted: #2e3540;
     --fg: #f2f2f7;
-    --fg-muted: #98989f;
-    --fg-faint: #636366;
-    --sep: rgba(84, 84, 88, 0.6);
+    --fg-muted: #98a1ad;
+    --fg-faint: #5f6875;
+    --sep: rgba(80, 92, 108, 0.55);
     --code-bg: rgba(255, 255, 255, 0.08);
     --tag-bg: rgba(255, 214, 10, 0.16);
     --shadow: 0 10px 40px rgba(0, 0, 0, 0.6);

@@ -47,12 +47,16 @@ FocusScope {
   // The "open on your phone" QR overlay.
   property bool phoneOpen: false
   property var phoneQr: null
+  // Without a hub: how to set one up (steps from the engine).
+  property var phoneInvite: null
 
   function showPhone() {
-    if (!service || service.activeHub === "") return
+    if (!service) return
     phoneOpen = true
     phoneQr = null
-    service.qrCode(service.activeHub, function(code) { root.phoneQr = code })
+    phoneInvite = null
+    if (service.activeHub === "") service.invite(function(invite) { root.phoneInvite = invite })
+    else service.qrCode(service.activeHub, function(code) { root.phoneQr = code })
   }
   property var picker: null   // { kind: "note"|"folder", id, title }
   property string confirmDeleteFolder: ""
@@ -355,9 +359,9 @@ FocusScope {
         anchors.verticalCenter: brand.verticalCenter
         size: Style.space(22)
         fontSize: Style.font.bodySmall
-        visible: root.service !== null && root.service.activeHub !== ""
+        visible: root.service !== null && root.service.daemonState === "ready"
         iconText: Model.GLYPH.phone
-        tooltipText: "Open omajot on your phone"
+        tooltipText: root.service && root.service.activeHub !== "" ? "Open omajot on your phone" : "Use omajot on your phone"
         foreground: root.foreground
         fontFamily: root.fontFamily
         onClicked: root.showPhone()
@@ -921,7 +925,7 @@ FocusScope {
 
         Text {
           anchors.horizontalCenter: parent.horizontalCenter
-          text: "Open omajot on your phone"
+          text: root.phoneInvite ? root.phoneInvite.title.replace(/:$/, "") : "Open omajot on your phone"
           color: root.foreground
           font.family: root.fontFamily
           font.pixelSize: Style.font.bodySmall
@@ -954,8 +958,26 @@ FocusScope {
           }
         }
 
+        // No hub yet: the steps to run one and reach it with Tailscale.
+        Repeater {
+          model: root.phoneInvite ? root.phoneInvite.steps : []
+          delegate: TextEdit {
+            required property var modelData
+            required property int index
+            width: Style.space(420)
+            text: (index + 1) + ". " + modelData
+            wrapMode: TextEdit.Wrap
+            readOnly: true
+            selectByMouse: true
+            color: root.foreground
+            font.family: root.fontFamily
+            font.pixelSize: Style.font.caption
+          }
+        }
+
         TextEdit {
           anchors.horizontalCenter: parent.horizontalCenter
+          visible: root.phoneQr !== null
           text: root.service ? root.service.activeHub : ""
           readOnly: true
           selectByMouse: true
@@ -966,7 +988,22 @@ FocusScope {
 
         Text {
           anchors.horizontalCenter: parent.horizontalCenter
+          visible: root.phoneQr !== null
           text: "Scan with the camera, then Share → Add to Home Screen"
+          color: root.muted
+          font.family: root.fontFamily
+          font.pixelSize: Style.font.caption
+        }
+
+        TextEdit {
+          anchors.horizontalCenter: parent.horizontalCenter
+          width: Style.space(420)
+          horizontalAlignment: TextEdit.AlignHCenter
+          wrapMode: TextEdit.Wrap
+          readOnly: true
+          selectByMouse: true
+          text: root.phoneQr ? root.phoneQr.footer : (root.phoneInvite ? "" : "")
+          visible: text !== ""
           color: root.muted
           font.family: root.fontFamily
           font.pixelSize: Style.font.caption

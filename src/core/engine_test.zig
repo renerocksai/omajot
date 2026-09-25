@@ -559,3 +559,16 @@ test "qr returns a square module matrix; too-long text is a request error" {
     const bad = try call(&e, arena, 1, "{{\"id\":2,\"cmd\":\"qr\",\"text\":\"{s}\"}}", .{long});
     try testing.expect(std.mem.find(u8, bad, "\"ok\":false") != null);
 }
+
+test "invite returns the steps; qr carries the Tailscale footer" {
+    var arena_state = std.heap.ArenaAllocator.init(testing.allocator);
+    defer arena_state.deinit();
+    const arena = arena_state.allocator();
+    var e = try Engine.init(testing.allocator, 0xa);
+    defer e.deinit();
+    const inv = try replyValue(arena, try call(&e, arena, 1, "{{\"id\":1,\"cmd\":\"invite\"}}", .{}));
+    try testing.expect(inv.get("steps").?.array.items.len >= 3);
+    try testing.expect(std.mem.find(u8, inv.get("footer").?.string, "Tailscale") != null);
+    const qr = try replyValue(arena, try call(&e, arena, 1, "{{\"id\":2,\"cmd\":\"qr\",\"text\":\"https://x.example\"}}", .{}));
+    try testing.expect(std.mem.find(u8, qr.get("footer").?.string, "tailscale.com") != null);
+}

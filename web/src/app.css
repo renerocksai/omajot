@@ -364,3 +364,6 @@ input { font: inherit; color: inherit; }
 .ios-browser .toolbar, .ios-browser .list-foot, .ios-browser .status {
   padding-bottom: calc(env(safe-area-inset-bottom) + 64px);
 }
+
+.qr-footer { font-size: 0.85em; opacity: 0.75; }
+.qr-footer a { color: inherit; }

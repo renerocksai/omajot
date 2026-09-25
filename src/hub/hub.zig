@@ -5,6 +5,7 @@
 const std = @import("std");
 const builtin = @import("builtin");
 const web = @import("baz");
+const core = @import("core");
 const Io = std.Io;
 const Allocator = std.mem.Allocator;
 
@@ -424,6 +425,10 @@ fn printPhoneUrl(gpa: Allocator, io: Io, explicit: ?[]const u8, port: u16) void 
     defer if (detected) |d| gpa.free(d);
     const url = explicit orelse detected orelse {
         std.debug.print("omajot hub: no public URL (publish it with `tailscale serve --bg --https=8443 http://127.0.0.1:{d}`, or pass --url)\n", .{port});
+        var buffer: [2048]u8 = undefined;
+        var w: Io.Writer = .fixed(&buffer);
+        core.invite.writeText(&w) catch return;
+        std.debug.print("\n{s}", .{w.buffered()});
         return;
     };
     var buffer: [16 * 1024]u8 = undefined;

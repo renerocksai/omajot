@@ -68,7 +68,8 @@ covers ASCII and Latin-1. `updated` changes on text edits only (not on pin, move
 | `folder.delete` | `folder` | – (its notes move to `folder: null`, subfolders to its parent) |
 | `search` | `q` | `ids: ["n-…"]`, case-insensitive substring over title + body, updated desc, trashed included |
 | `paste` | `note`, `pos` | `ins` (markdown to insert). **Daemon only**, the daemon handles it itself (clipboard → attachments) and never forwards it to the engine. The client then sends the text as an ordinary `edit` |
-| `qr` | `text` (≤ 213 bytes) | `size`, `rows: ["0101…"]` (1 = dark module, no quiet zone): a QR code, byte mode, level M, versions 1–10. Used for "open on your phone" |
+| `qr` | `text` (≤ 213 bytes) | `size`, `rows: ["0101…"]` (1 = dark module, no quiet zone): a QR code, byte mode, level M, versions 1–10; `footer`: the Tailscale note to show under it. Used for "open on your phone" |
+| `invite` | – | `title`, `steps: [..]`, `footer`: how to run a hub and reach it with Tailscale (shown when no hub is configured). One source: `src/core/invite.zig` |
 | `attach` | `path` (a local file) | `name` (`attachments/<sha256>.<ext>`). **Daemon only**: copies the file into the attachments and queues its upload |
 | `status` | – | `sync`: `"online"`\|`"connecting"`\|`"offline"`, `hub`, `pending` (unsent batches), `head`. **Answered by the shell** (daemon / PWA); the engine only returns offline placeholders |
 

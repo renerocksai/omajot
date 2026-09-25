@@ -29,6 +29,7 @@ const text = @import("text.zig");
 const rga = @import("rga.zig");
 const ot = @import("ot.zig");
 const qr = @import("qr.zig");
+const invite = @import("invite.zig");
 
 pub const Id = rga.Id;
 pub const version = "0.1.0";
@@ -317,6 +318,11 @@ pub const Engine = struct {
             const code = qr.encode(try getStr(obj, "text")) catch return error.QrTextTooLong;
             try w.writeByte(',');
             try qr.writeRowsJson(w, &code);
+            try w.writeAll(",\"footer\":");
+            try json.Stringify.encodeJsonString(invite.footer, .{}, w);
+        } else if (eql(u8, cmd, "invite")) {
+            try w.writeByte(',');
+            try invite.writeJson(w);
         } else if (eql(u8, cmd, "paste")) {
             return error.NotHandledByEngine;
         } else if (eql(u8, cmd, "status")) {

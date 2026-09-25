@@ -20,6 +20,7 @@ pub fn write(out: *Io.Writer, label: []const u8, url: []const u8) !void {
     const code = try core.qr.encode(url);
     try out.print("\n{s}\n  {s}\n\n", .{ label, url });
     try core.qr.renderTerminal(out, &code);
+    try out.print("\n{s}\n", .{core.invite.footer});
 }
 
 pub fn main(init: std.process.Init, args: []const []const u8) !void {
@@ -38,8 +39,13 @@ pub fn main(init: std.process.Init, args: []const []const u8) !void {
             std.process.exit(2);
         };
         break :blk config.hub orelse {
-            std.debug.print("omajot qr: no hub configured. Pass a URL, or set \"hub\" in {s}\n", .{path});
-            std.process.exit(2);
+            // No hub yet: invite instead of failing bare.
+            var buffer: [4096]u8 = undefined;
+            var stdout = Io.File.stdout().writer(io, &buffer);
+            try stdout.interface.print("No hub is configured ({s} has no \"hub\").\n\n", .{path});
+            try core.invite.writeText(&stdout.interface);
+            try stdout.interface.flush();
+            std.process.exit(1);
         };
     };
     var buffer: [16 * 1024]u8 = undefined;

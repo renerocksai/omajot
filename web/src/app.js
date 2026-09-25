@@ -367,11 +367,18 @@ function onSearch(q) {
 // ask({ title, message, input, placeholder, ok, buttons }) → string | null
 // This app's address as a QR code, for opening omajot on a phone. The matrix
 // comes from the core (the same encoder as `omajot qr` and the plugin).
+// Plain URLs in already-escaped text as links (the footer names tailscale.com).
+function linkify(escaped) {
+  return escaped.replace(/https:\/\/[^\s<]+[^\s<.,;:!?]/g, (u) => `<a href="${u}" target="_blank" rel="noopener">${u}</a>`)
+}
+
 function showOnPhone() {
   const url = location.origin + '/'
-  let svg
+  let svg, footer = ''
   try {
-    svg = qrSvg(replica.request('qr', { text: url }), 'QR code for ' + url)
+    const code = replica.request('qr', { text: url })
+    svg = qrSvg(code, 'QR code for ' + url)
+    footer = code.footer || ''
   } catch (e) {
     return toast('No QR code: ' + e.message)
   }
@@ -383,6 +390,7 @@ function showOnPhone() {
       <div class="qr-box">${svg}</div>
       <p class="qr-url">${escapeHtml(url)}</p>
       <p>Scan with your phone's camera, then Share → Add to Home Screen.</p>
+      ${footer ? `<p class="qr-footer">${linkify(escapeHtml(footer))}</p>` : ''}
       <div class="modal-buttons"><button data-cancel>Close</button></div>
     </div>`
   root.classList.add('open')

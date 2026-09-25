@@ -288,7 +288,14 @@ Item {
   // The module matrix for `text`: { size, rows: ["0101…"] }, or null.
   function qrCode(text, callback) {
     request("qr", { text: String(text || "") }, function(reply) {
-      callback(reply.ok ? { size: reply.size, rows: reply.rows } : null)
+      callback(reply.ok ? { size: reply.size, rows: reply.rows, footer: String(reply.footer || "") } : null)
+    })
+  }
+
+  // How to run a hub and reach it with Tailscale: { title, steps, footer }.
+  function invite(callback) {
+    request("invite", {}, function(reply) {
+      callback(reply.ok ? { title: String(reply.title), steps: reply.steps || [], footer: String(reply.footer || "") } : null)
     })
   }
 

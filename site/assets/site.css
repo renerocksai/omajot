@@ -1,4 +1,4 @@
-/* omajot site: warm paper and Notes yellow in light, cool blue-grey in dark. */
+/* omajot site: warm paper and Notes yellow in light (the default), cool blue-grey in dark (the toggle). */
 :root {
   --paper: #fbf8f1; --paper-2: #f3eee2; --card: #ffffff; --ink: #1f1d1a; --muted: #6a6358;
   --line: #e4ddcd; --accent: #f5c518; --accent-deep: #d69e00; --accent-ink: #8a6400;
@@ -8,14 +8,6 @@
   --radius: 14px; color-scheme: light;
   /* How much accent yellow tints highlighted panels; dark mode keeps it faint so panels stay grey. */
   --tint: 12%;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --paper: #0d1117; --paper-2: #151b23; --card: #161c24; --ink: #eef2f6; --muted: #98a3b1;
-    --line: #28313c; --accent: #f5c518; --accent-deep: #c99400; --accent-ink: #f5c518;
-    --code-bg: #121820; --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 12px 32px rgba(0, 0, 0, .35); color-scheme: dark;
-    --tint: 0%;
-  }
 }
 :root[data-theme="dark"] {
   --paper: #0d1117; --paper-2: #151b23; --card: #161c24; --ink: #eef2f6; --muted: #98a3b1;

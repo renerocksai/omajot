@@ -70,7 +70,8 @@ def qr_terminal():
 
 def shot(name, alt):
     light, dark = f"assets/shots/{name}-light.webp", f"assets/shots/{name}-dark.webp"
-    return (f'<picture><source srcset="{dark}" media="(prefers-color-scheme: dark)">'
+    # Light by default; site.js switches the source to the dark shot with the theme toggle.
+    return (f'<picture><source srcset="{dark}" media="not all">'
             f'<img src="{light}" alt="{html.escape(alt)}" loading="lazy" data-light="{light}" data-dark="{dark}"></picture>')
 
 

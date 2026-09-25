@@ -1,16 +1,15 @@
-// Theme toggle (follows the OS until clicked), mobile menu, copy buttons.
+// Theme toggle (light by default, dark when chosen; remembered), mobile menu, copy buttons.
 (function () {
   var root = document.documentElement
   function applyShots() {
-    var forced = root.dataset.theme
+    var dark = root.dataset.theme === 'dark'
     document.querySelectorAll('picture source[media]').forEach(function (s) {
-      s.media = forced === 'dark' ? 'all' : forced === 'light' ? 'not all' : '(prefers-color-scheme: dark)'
+      s.media = dark ? 'all' : 'not all'
     })
   }
   applyShots()
   document.querySelector('.theme').addEventListener('click', function () {
-    var dark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches
-    root.dataset.theme = dark ? 'light' : 'dark'
+    root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark'
     try { localStorage.setItem('omajot-theme', root.dataset.theme) } catch (e) {}
     applyShots()
   })

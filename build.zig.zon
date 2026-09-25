@@ -1,0 +1,13 @@
+.{
+    .name = .omajot,
+    .version = "0.1.0",
+    .fingerprint = 0x5a15b30da7d19af7,
+    .minimum_zig_version = "0.16.0",
+    .dependencies = .{
+        .baz = .{
+            .url = "https://github.com/technologylab-ai/baz/archive/2258ff87c66840ecd83ab7d37b8ffacad7267275.tar.gz",
+            .hash = "baz-0.1.0-q-QL000kZwC1LBGt4jZ6nuZceVOP_cKEuR06DieaKqhK",
+        },
+    },
+    .paths = .{ "build.zig", "build.zig.zon", "src", "docs", "LICENSE", "README.md" },
+}

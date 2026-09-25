@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>omajot hub spike</title>
+<style>
+  :root { --bg:#fff; --fg:#111; --muted:#666; --ok:#0a7d32; --bad:#b3261e; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#111; --fg:#eee; --muted:#999; --ok:#5fd38a; --bad:#ff8a80; } }
+  body { background:var(--bg); color:var(--fg); font:16px/1.4 system-ui, sans-serif; margin:0; padding:16px; }
+  h1 { font-size:20px; margin:0 0 8px; }
+  p { color:var(--muted); margin:0 0 12px; }
+  pre { white-space:pre-wrap; word-break:break-word; font-size:13px; }
+  .ok { color:var(--ok); } .bad { color:var(--bad); }
+</style>
+</head>
+<body>
+<h1>omajot hub spike</h1>
+<p>Runs for 45 s: opens an SSE doorbell, pushes an op every 2 s, survives server
+deadlines (15 s) by reconnecting with Last-Event-ID, then reports back to the hub.
+Keep this page in the foreground until it says “reported”.</p>
+<pre id="out">starting…</pre>
+<script>
+const out = document.getElementById('out');
+const started = Date.now();
+const r = { ua: navigator.userAgent, opens: 0, errors: 0, heads: [], duplicates: 0,
+            reopenCursors: [], pushed: 0, pushErrors: 0, whoami: null, maxLatencyMs: 0 };
+const seenAt = new Map();   // head -> time the doorbell announced it
+const pushedHeads = [];     // [head, time the POST was sent]
+let lastSeen = 0;
+
+function show(status) {
+  out.textContent = status + '\n\n' + JSON.stringify(r, null, 2);
+}
+
+fetch('/api/whoami').then(x => x.json()).then(j => { r.whoami = j; lastSeen = j.head; });
+
+const es = new EventSource('/api/events');
+es.addEventListener('hello', () => { r.opens += 1; r.reopenCursors.push(lastSeen); show('connected'); });
+es.addEventListener('head', ev => {
+  const head = Number(ev.data && JSON.parse(ev.data).head);
+  if (r.heads.includes(head)) r.duplicates += 1;
+  r.heads.push(head);
+  lastSeen = Math.max(lastSeen, head);
+  seenAt.set(head, Date.now());
+  show('streaming');
+});
+es.onerror = () => { r.errors += 1; show('reconnecting…'); };
+
+const pusher = setInterval(async () => {
+  try {
+    const t = Date.now();
+    const res = await fetch('/api/ops', { method: 'POST', body: 'op from page at ' + t });
+    const j = await res.json();
+    pushedHeads.push([j.head, t]);
+    r.pushed += 1;
+  } catch (e) { r.pushErrors += 1; }
+}, 2000);
+
+setTimeout(async () => {
+  clearInterval(pusher);
+  es.close();
+  r.durationMs = Date.now() - started;
+  // A doorbell announcing head H covers every op <= H (events may coalesce, and
+  // may arrive before the POST response does).
+  r.missed = pushedHeads.filter(([h]) => !r.heads.some(x => x >= h)).map(([h]) => h);
+  for (const [h, t] of pushedHeads) {
+    const when = [...seenAt.entries()].filter(([x]) => x >= h).map(([, at]) => at);
+    if (when.length) r.maxLatencyMs = Math.max(r.maxLatencyMs, Math.min(...when) - t);
+  }
+  r.verdict = (r.opens >= 2 && r.duplicates === 0 && r.missed.length === 0) ? 'PASS' : 'CHECK';
+  await fetch('/api/report', { method: 'POST', body: JSON.stringify(r) });
+  show('reported: ' + r.verdict);
+  out.className = r.verdict === 'PASS' ? 'ok' : 'bad';
+}, 45000);
+</script>
+</body>
+</html>

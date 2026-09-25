@@ -1,0 +1,17 @@
+.{
+    .name = .omajot_hub_spike,
+    .version = "0.0.0",
+    .fingerprint = 0x571cfddc98a5d13e,
+    .minimum_zig_version = "0.16.0",
+    .dependencies = .{
+        .baz = .{
+            .url = "https://github.com/technologylab-ai/baz/archive/2258ff87c66840ecd83ab7d37b8ffacad7267275.tar.gz",
+            .hash = "baz-0.1.0-q-QL000kZwC1LBGt4jZ6nuZceVOP_cKEuR06DieaKqhK",
+        },
+        .zli = .{
+            .url = "https://github.com/renerocksai/zli/archive/4f17b1f1eacda7b87c49461e34b1520c392788b2.tar.gz",
+            .hash = "zli-0.1.1-pechgr4WAQBsw7p7JPU-GHHZ5xsBpEdfCRNpNtnQYnBz",
+        },
+    },
+    .paths = .{ "build.zig", "build.zig.zon", "src" },
+}

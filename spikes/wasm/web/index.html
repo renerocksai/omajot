@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>omajot core.wasm spike</title>
+</head>
+<body>
+<h1>core.wasm</h1>
+<pre id="out">running…</pre>
+<script type="module">
+  import { loadCore, runChecks } from "./glue.js";
+  const out = document.getElementById("out");
+  try {
+    const bytes = await (await fetch("core.wasm")).arrayBuffer();
+    const core = await loadCore(bytes);
+    const results = runChecks(core);
+    const failed = results.filter((r) => !r.ok).length;
+    out.textContent = results.map((r) => `${r.ok ? "PASS" : "FAIL"} ${r.name}${r.detail ? " — " + r.detail : ""}`).join("\n")
+      + `\n${failed ? "FAILED " + failed : "ALL PASS"} (${results.length} checks, wasm ${bytes.byteLength} bytes, memory ${core.memoryBytes()} bytes, 1000 edits ${globalThis.__bigEditMs?.toFixed(1)} ms, ${navigator.userAgent})`;
+  } catch (e) {
+    out.textContent = "ERROR " + e.message;
+  }
+</script>
+</body>
+</html>

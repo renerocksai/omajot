@@ -27,6 +27,7 @@ Flickable {
   readonly property var segments: Model.splitPreview(root.text, root.dataDir)
   readonly property var styling: ({
     linkColor: hexOf(root.accent),
+    textColor: hexOf(root.foreground),
     fontSizePx: root.fontSize,
     tableBorderColor: hexOf(Qt.darker(root.foreground, 2.2))
   })

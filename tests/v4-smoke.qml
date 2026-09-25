@@ -17,7 +17,7 @@ QtObject {
     check("patch", Model.docApplyPatch(doc, { base: 0, pseq: 1, pos: 1, del: 0, ins: "P" }).pieces, [{ pos: 1, del: 0, ins: "P" }])
     check("tie", doc.text, "aPLb")
     check("split", Model.xformPrim(Model.insPrim(3, "X", 0), Model.delPrim(1, 4, 7), false).b.length, 2)
-    check("preview", Model.splitPreview("- [ ] a", "/d")[0].text, "- [☐](task:0) a")
+    check("preview", Model.splitPreview("- [ ] a", "/d")[0].text, "- [" + Model.GLYPH.taskOpen + "](task:0) a")
     check("style", Model.styleMarkdown("x", {}).length > 0, true)
     check("format", Model.formatUpdated(Date.now() - 120000, Date.now()), "2m ago")
     check("glyph", Model.GLYPH.pin.charCodeAt(0), 0xf08d)

@@ -332,7 +332,7 @@ test("splitPreview lifts attachment images and links tasks", () => {
   const text = "# T\n- [ ] todo\ntext ![shot](attachments/" + sha + ".png) after\n```\n- [ ] in code\n```"
   const segments = M.splitPreview(text, "/data")
   assert.equal(segments.length, 3)
-  assert.match(segments[0].text, /\[☐\]\(task:1\) todo/)
+  assert.ok(segments[0].text.includes("[" + M.GLYPH.taskOpen + "](task:1) todo"))
   assert.deepEqual(segments[1], { kind: "image", url: "file:///data/attachments/" + sha + ".png", title: "shot" })
   assert.match(segments[2].text, /after/)
   assert.match(segments[2].text, /- \[ \] in code/)
@@ -356,7 +356,7 @@ test("styleMarkdown themes links, keeps task links neutral, drops remote embeds"
   const out = M.styleMarkdown("[a](https://x.example) [☐](task:3) ![r](https://evil.example/p.png) <img src=x alt=y>",
     { linkColor: "#ff0000", fontSizePx: 13, tableBorderColor: "#333333" })
   assert.match(out, /<a href="https:\/\/x.example" style="color:#ff0000">a<\/a>/)
-  assert.match(out, /<a href="task:3" style="text-decoration:none">☐<\/a>/)
+  assert.match(out, /<a href="task:3" style="text-decoration:none;color:#[0-9a-fA-F]+">☐<\/a>/)
   assert.doesNotMatch(out, /!\[/)
   assert.doesNotMatch(out, /<img/)
 })
@@ -371,4 +371,31 @@ test("manifest defaults survive the model's normalisation", () => {
   assert.equal(defaults.hubUrl, "")
   assert.ok(!M.daemonArgv("/b", defaults.hubUrl, "/d").includes("--hub"))
   for (const entry of manifest.barWidget.schema) assert.ok(entry.key in defaults, entry.key)
+})
+
+// --- bare URLs in the preview ----------------------------------------------------
+
+test("bare URLs become themed links, including ones md4c misses", () => {
+  const style = { linkColor: "#ff0000", fontSizePx: 13, tableBorderColor: "#333333" }
+  const text = "https://a.example/x/ee02-06\n\nhttps://b.example/v/ek2aqM#dmVwPVZp=\n\nsee https://c.example/p_q_r."
+  const out = M.styleMarkdown(text, style)
+  assert.match(out, /<a href="https:\/\/a\.example\/x\/ee02-06" style="color:#ff0000">/)
+  assert.match(out, /<a href="https:\/\/b\.example\/v\/ek2aqM#dmVwPVZp=" style="color:#ff0000">/)
+  // Trailing punctuation stays outside; underscores cannot turn into emphasis.
+  assert.match(out, /href="https:\/\/c\.example\/p_q_r" style="color:#ff0000">https:\/\/c\.example\/p\\_q\\_r<\/a>\./)
+})
+
+test("URLs that are already links or autolinks are not linked twice", () => {
+  const style = { linkColor: "#ff0000", fontSizePx: 13, tableBorderColor: "#333333" }
+  const out = M.styleMarkdown("[site](https://a.example/) and [https://b.example/](https://b.example/) <https://c.example/>", style)
+  assert.equal((out.match(/<a /g) || []).length, 2)
+  assert.equal((out.match(/href="https:\/\/b\.example\/"/g) || []).length, 1)
+  assert.match(out, /<https:\/\/c\.example\/>/)
+})
+
+test("task boxes use the theme's text and accent colours, not link blue", () => {
+  const style = { linkColor: "#ff0000", textColor: "#eeeeee", fontSizePx: 13, tableBorderColor: "#333333" }
+  const out = M.styleMarkdown(M.splitPreview("- [ ] open\n- [x] done", "/d")[0].text, style)
+  assert.match(out, new RegExp('style="text-decoration:none;color:#eeeeee">' + M.GLYPH.taskOpen + "</a>"))
+  assert.match(out, new RegExp('style="text-decoration:none;color:#ff0000">' + M.GLYPH.taskDone + "</a>"))
 })

@@ -42,7 +42,10 @@ export const GLYPH = {
   rename: "\uf040",
   close: "\uf00d",
   move: "\uf08e",
-  menu: "\uf0c9"
+  menu: "\uf0c9",
+  // Task boxes in the preview (Font Awesome square-o / check-square).
+  taskOpen: "\uf096",
+  taskDone: "\uf14a"
 }
 
 // --- settings ---------------------------------------------------------------
@@ -785,7 +788,7 @@ export function attachmentUrl(dataDir, relative) {
 
 function linkTasks(line, index) {
   return line.replace(/^(\s*(?:[-*+]|\d+[.)])\s+)\[([ xX])\]\s/, function (whole, lead, mark) {
-    const box = mark === " " ? "☐" : "☑"
+    const box = mark === " " ? GLYPH.taskOpen : GLYPH.taskDone
     return lead + "[" + box + "](task:" + index + ") "
   })
 }
@@ -877,13 +880,43 @@ function escapeAttribute(value) {
 
 const LINK_RE = /(^|[^!])\[([^\]]*)\]\(([^)\s]+)\)/g
 
-function styleLinksInProse(chunk, color) {
+// A bare http(s) URL after whitespace or at a line start. Qt's own autolinking
+// (md4c) misses some URLs (e.g. with a `#…=` fragment) and ignores the theme
+// colour, so bare URLs are linked here like any other link. Trailing sentence
+// punctuation stays outside; `](url` and `<url>` are not bare.
+const BARE_URL_RE = /(^|[ \t\n])(https?:\/\/[^\s<>()\[\]"]*[^\s<>()\[\]".,;:!?'])/g
+const ANCHOR_RE = /<a\b[^>]*>[\s\S]*?<\/a>/g
+
+function escapeMarkdown(text) {
+  return String(text).replace(/[\\`*_~\[\]<>]/g, "\\$&")
+}
+
+function linkBareUrls(text, color) {
+  return text.replace(BARE_URL_RE, function (whole, prefix, url) {
+    return prefix + '<a href="' + escapeAttribute(url) + '" style="color:' + color + '">' + escapeMarkdown(url) + "</a>"
+  })
+}
+
+function styleLinksInProse(chunk, color, textColor) {
   if (color === "") return chunk
-  return chunk.replace(LINK_RE, function (whole, prefix, label, url) {
-    // Task boxes keep the text colour; they read as controls, not links.
-    const style = /^task:/.test(url) ? "text-decoration:none" : "color:" + color
+  const linked = chunk.replace(LINK_RE, function (whole, prefix, label, url) {
+    // Task boxes read as controls, not links: open ones in the text colour,
+    // done ones in the accent, never Qt's default link blue.
+    let style = "color:" + color
+    if (/^task:/.test(url)) style = "text-decoration:none;color:" + (label === GLYPH.taskDone ? color : textColor || color)
     return prefix + '<a href="' + escapeAttribute(url) + '" style="' + style + '">' + label + "</a>"
   })
+  // Bare URLs only outside the anchors just made.
+  const out = []
+  let last = 0
+  let match
+  ANCHOR_RE.lastIndex = 0
+  while ((match = ANCHOR_RE.exec(linked)) !== null) {
+    out.push(linkBareUrls(linked.slice(last, match.index), color), match[0])
+    last = match.index + match[0].length
+  }
+  out.push(linkBareUrls(linked.slice(last), color))
+  return out.join("")
 }
 
 const LIST_ITEM_RE = /^\s*(?:[-*+]|\d+[.)])\s+/
@@ -1069,11 +1102,11 @@ function styleInline(chunk, options) {
   let match
   INLINE_CODE_RE.lastIndex = 0
   while ((match = INLINE_CODE_RE.exec(chunk)) !== null) {
-    parts.push(styleLinksInProse(neutralizeEmbeds(chunk.slice(last, match.index)), options.color))
+    parts.push(styleLinksInProse(neutralizeEmbeds(chunk.slice(last, match.index)), options.color, options.text))
     parts.push(options.size !== "" ? codeSpan(match[0].slice(1, -1), options.size) : match[0])
     last = match.index + match[0].length
   }
-  parts.push(styleLinksInProse(neutralizeEmbeds(chunk.slice(last)), options.color))
+  parts.push(styleLinksInProse(neutralizeEmbeds(chunk.slice(last)), options.color, options.text))
   return parts.join("")
 }
 
@@ -1099,6 +1132,7 @@ export function styleMarkdown(markdown, options) {
   const size = sanitizeFontSize(settings.fontSizePx)
   const styling = {
     color: sanitizeColor(settings.linkColor),
+    text: sanitizeColor(settings.textColor),
     size: size,
     border: sanitizeColor(settings.tableBorderColor)
   }

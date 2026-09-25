@@ -1,11 +1,18 @@
 const std = @import("std");
+const builtin = @import("builtin");
 
 // One `omajot` binary (`omajot hub`, `omajot daemon`), core.wasm for the PWA,
 // and the tests. Parts: src/core (pure), src/hub (baz), src/daemon, src/wasm.
 pub fn build(b: *std.Build) void {
-    const target = b.standardTargetOptions(.{});
+    // Native Linux builds use musl: one static binary, no glibc .so files to
+    // match. Pass -Dtarget=…-gnu to link glibc instead.
+    const target = b.standardTargetOptions(.{
+        .default_target = if (builtin.os.tag == .linux) .{ .abi = .musl } else .{},
+    });
     const optimize = b.standardOptimizeOption(.{});
-    const linux = target.result.os.tag == .linux;
+    // Zig 0.16's own linker rejects GCC 16's crt1.o (.sframe relocations);
+    // only glibc builds need LLVM/LLD. musl uses Zig's own crt.
+    const glibc = target.result.os.tag == .linux and target.result.abi.isGnu();
 
     const core = b.createModule(.{
         .root_source_file = b.path("src/core/core.zig"),
@@ -18,7 +25,7 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
-        .link_libc = true,
+        .link_libc = false,
         .imports = &.{
             .{ .name = "core", .module = core },
             .{ .name = "baz", .module = baz },
@@ -27,9 +34,8 @@ pub fn build(b: *std.Build) void {
     const exe = b.addExecutable(.{
         .name = "omajot",
         .root_module = exe_module,
-        // Zig 0.16's own linker rejects GCC 16's crt1.o (.sframe relocations).
-        .use_llvm = if (linux) true else null,
-        .use_lld = if (linux) true else null,
+            .use_llvm = if (glibc) true else null,
+        .use_lld = if (glibc) true else null,
     });
     b.installArtifact(exe);
 
@@ -63,8 +69,8 @@ pub fn build(b: *std.Build) void {
     test_step.dependOn(&b.addRunArtifact(core_tests).step);
     const exe_tests = b.addTest(.{
         .root_module = exe_module,
-        .use_llvm = if (linux) true else null,
-        .use_lld = if (linux) true else null,
+        .use_llvm = if (glibc) true else null,
+        .use_lld = if (glibc) true else null,
     });
     test_step.dependOn(&b.addRunArtifact(exe_tests).step);
 }

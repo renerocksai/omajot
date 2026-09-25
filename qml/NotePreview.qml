@@ -12,6 +12,9 @@ Flickable {
 
   property string text: ""
   property string dataDir: ""
+  // Changes when an attachment finishes downloading; a new URL makes Qt load
+  // an image again instead of keeping a failed load.
+  property int reloadStamp: 0
   property color foreground: Color.foreground
   property color accent: Color.accent
   property string fontFamily: Style.font.family
@@ -90,7 +93,7 @@ Flickable {
         Image {
           id: segmentImage
           visible: segment.isImage && status === Image.Ready
-          source: segment.isImage ? segment.modelData.url : ""
+          source: segment.isImage ? segment.modelData.url + (root.reloadStamp > 0 ? "?v=" + root.reloadStamp : "") : ""
           asynchronous: true
           fillMode: Image.PreserveAspectFit
           width: implicitWidth > 0 ? Math.min(implicitWidth, parent.width) : 0

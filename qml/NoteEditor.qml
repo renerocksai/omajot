@@ -294,6 +294,7 @@ Item {
     width: root.showSource ? sourceScroll.width : parent.width
     text: root.previewText
     dataDir: root.service ? root.service.dataDir : ""
+    reloadStamp: root.service ? root.service.attachmentStamp : 0
     foreground: root.foreground
     accent: root.accent
     fontFamily: root.fontFamily

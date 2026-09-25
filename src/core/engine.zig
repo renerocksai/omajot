@@ -315,9 +315,12 @@ pub const Engine = struct {
         } else if (eql(u8, cmd, "search")) {
             try self.writeSearch(try getStr(obj, "q"), w);
         } else if (eql(u8, cmd, "qr")) {
-            const code = qr.encode(try getStr(obj, "text")) catch return error.QrTextTooLong;
+            const qr_text = try getStr(obj, "text");
+            const code = qr.encode(qr_text) catch return error.QrTextTooLong;
             try w.writeByte(',');
             try qr.writeRowsJson(w, &code);
+            // A code a phone cannot open: the UIs show the invitation instead.
+            try w.print(",\"loopback\":{}", .{invite.isLoopback(qr_text)});
             try w.writeAll(",\"footer\":");
             try json.Stringify.encodeJsonString(invite.footer, .{}, w);
         } else if (eql(u8, cmd, "invite")) {

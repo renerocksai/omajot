@@ -85,23 +85,20 @@ try {
   await wait(desktop, () => window.omajot?.replica.engine.kind === 'wasm')
   await wait(phone, () => window.omajot?.replica.engine.kind === 'wasm')
 
-  step('desktop shows this address as a QR code; Esc closes it')
+  step('on localhost the phone button explains instead of showing a useless QR code; Esc closes it')
   await desktop.click('.p-folders [data-act="phone"]')
-  await desktop.waitForSelector('.qr-modal svg.qr-code')
-  const qr = await desktop.evaluate(() => {
-    const svg = document.querySelector('.qr-modal svg.qr-code')
-    const expected = window.omajot.replica.request('qr', { text: location.origin + '/' })
-    const box = svg.getBoundingClientRect()
-    return { modules: +svg.dataset.modules, viewBox: svg.getAttribute('viewBox'), size: expected.size,
-      url: document.querySelector('.qr-url').textContent, origin: location.origin + '/', width: box.width, height: box.height,
-      runs: (svg.querySelector('path').getAttribute('d').match(/M/g) || []).length }
-  })
-  assert.equal(qr.modules, qr.size)
-  assert.ok(qr.size >= 21 && (qr.size - 17) % 4 === 0, `a real QR size (${qr.size})`)
-  assert.equal(qr.viewBox, `0 0 ${qr.size + 8} ${qr.size + 8}`, 'N×N modules plus a 4-module quiet zone')
-  assert.equal(qr.url, qr.origin)
-  assert.ok(qr.runs > qr.size, 'dark modules drawn')
-  assert.ok(qr.width >= 200 && Math.abs(qr.width - qr.height) < 1, `square and large enough (${qr.width}×${qr.height})`)
+  await desktop.waitForSelector('.qr-modal .qr-warning')
+  const invite = await desktop.evaluate(() => ({
+    svg: !!document.querySelector('.qr-modal svg.qr-code'),
+    warning: document.querySelector('.qr-warning').textContent,
+    steps: document.querySelectorAll('.qr-steps li').length,
+    expected: window.omajot.replica.request('invite', {}).steps.length,
+    loopback: window.omajot.replica.request('qr', { text: location.origin + '/' }).loopback,
+  }))
+  assert.equal(invite.loopback, true, 'the engine flags 127.0.0.1 as loopback')
+  assert.equal(invite.svg, false, 'no QR code for an address a phone cannot open')
+  assert.ok(invite.warning.includes(await desktop.evaluate(() => location.origin)), 'names the address')
+  assert.equal(invite.steps, invite.expected, 'shows every invitation step from the engine')
   await shot(desktop, 'desktop-qr')
   await desktop.keyboard.press('Escape')
   await wait(desktop, () => !document.querySelector('.modal-root.open'))
@@ -124,8 +121,8 @@ try {
   await new Promise(r => setTimeout(r, 400))
   await shot(phone, 'phone-folders')
   await phone.click('.p-folders [data-act="phone"]')
-  await phone.waitForSelector('.qr-modal svg.qr-code')
-  assert.ok(await phone.$eval('.qr-modal svg.qr-code', el => el.getBoundingClientRect().right <= innerWidth), 'fits the phone screen')
+  await phone.waitForSelector('.qr-modal .qr-steps')
+  assert.ok(await phone.$eval('.qr-modal', el => el.getBoundingClientRect().right <= innerWidth), 'fits the phone screen')
   await shot(phone, 'phone-qr')
   await phone.mouse.click(8, 8)
   await wait(phone, () => !document.querySelector('.modal-root.open'))

@@ -55,8 +55,18 @@ FocusScope {
     phoneOpen = true
     phoneQr = null
     phoneInvite = null
-    if (service.activeHub === "") service.invite(function(invite) { root.phoneInvite = invite })
-    else service.qrCode(service.activeHub, function(code) { root.phoneQr = code })
+    var showInvite = function(note) {
+      root.service.invite(function(invite) {
+        if (invite) invite.note = note
+        root.phoneInvite = invite
+      })
+    }
+    if (service.activeHub === "") return showInvite("")
+    service.qrCode(service.activeHub, function(code) {
+      // A loopback hub URL works only on this computer: invite, don't show a useless code.
+      if (code && code.loopback) showInvite("This hub address works only on this computer. A phone cannot open it: " + root.service.activeHub)
+      else root.phoneQr = code
+    })
   }
   property var picker: null   // { kind: "note"|"folder", id, title }
   property string confirmDeleteFolder: ""
@@ -956,6 +966,16 @@ FocusScope {
             target: root
             function onPhoneQrChanged() { qrCanvas.requestPaint() }
           }
+        }
+
+        Text {
+          width: Style.space(420)
+          visible: text !== ""
+          text: root.phoneInvite && root.phoneInvite.note ? root.phoneInvite.note : ""
+          wrapMode: Text.Wrap
+          color: Color.urgent
+          font.family: root.fontFamily
+          font.pixelSize: Style.font.caption
         }
 
         // No hub yet: the steps to run one and reach it with Tailscale.

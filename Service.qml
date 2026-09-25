@@ -85,6 +85,8 @@ Item {
 
   property int nextId: 1
   property var callbacks: ({})
+  // Bumped on every downloaded attachment, so failed image loads retry.
+  property int attachmentStamp: 0
 
   function request(cmd, fields, callback) {
     if (!daemon.running) {
@@ -120,6 +122,10 @@ Item {
       syncState = String(msg.state || "")
       syncPending = Number(msg.pending) || 0
       syncHead = Number(msg.head) || 0
+      break
+    case "attachment":
+      // A missing image arrived: previews reload their images (NotePreview).
+      attachmentStamp += 1
       break
     case "error":
       lastError = String(msg.error || "")
@@ -288,7 +294,7 @@ Item {
   // The module matrix for `text`: { size, rows: ["0101…"] }, or null.
   function qrCode(text, callback) {
     request("qr", { text: String(text || "") }, function(reply) {
-      callback(reply.ok ? { size: reply.size, rows: reply.rows, footer: String(reply.footer || "") } : null)
+      callback(reply.ok ? { size: reply.size, rows: reply.rows, footer: String(reply.footer || ""), loopback: reply.loopback === true } : null)
     })
   }
 

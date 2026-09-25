@@ -374,11 +374,13 @@ function linkify(escaped) {
 
 function showOnPhone() {
   const url = location.origin + '/'
-  let svg, footer = ''
+  let svg, footer = '', invite = null
   try {
     const code = replica.request('qr', { text: url })
     svg = qrSvg(code, 'QR code for ' + url)
     footer = code.footer || ''
+    // Opened on localhost (development): a phone cannot open that address.
+    if (code.loopback) invite = replica.request('invite', {})
   } catch (e) {
     return toast('No QR code: ' + e.message)
   }
@@ -387,10 +389,14 @@ function showOnPhone() {
     <div class="modal-scrim"></div>
     <div class="modal qr-modal" role="dialog" aria-modal="true" aria-label="Show on phone">
       <h2>Open omajot on your phone</h2>
+      ${invite ? `
+      <p class="qr-warning">This address works only on this computer. A phone cannot open it: ${escapeHtml(url)}</p>
+      <p>${escapeHtml(invite.title)}</p>
+      <ol class="qr-steps">${invite.steps.map((s) => `<li>${linkify(escapeHtml(s))}</li>`).join('')}</ol>` : `
       <div class="qr-box">${svg}</div>
       <p class="qr-url">${escapeHtml(url)}</p>
       <p>Scan with your phone's camera, then Share → Add to Home Screen.</p>
-      ${footer ? `<p class="qr-footer">${linkify(escapeHtml(footer))}</p>` : ''}
+      ${footer ? `<p class="qr-footer">${linkify(escapeHtml(footer))}</p>` : ''}`}
       <div class="modal-buttons"><button data-cancel>Close</button></div>
     </div>`
   root.classList.add('open')

@@ -17,6 +17,12 @@ const usage =
 /// Write "label: url", a blank line and the QR code. `error.DataTooLong` if
 /// the URL does not fit a QR version 1–10 (213 bytes).
 pub fn write(out: *Io.Writer, label: []const u8, url: []const u8) !void {
+    if (core.invite.isLoopback(url)) {
+        // A phone cannot open it: explain instead of printing a useless code.
+        try out.print("\n{s}\n  {s}\n\n", .{ core.invite.loopback_note, url });
+        try core.invite.writeText(out);
+        return;
+    }
     const code = try core.qr.encode(url);
     try out.print("\n{s}\n  {s}\n\n", .{ label, url });
     try core.qr.renderTerminal(out, &code);

@@ -19,6 +19,8 @@ Item {
   // --- configuration (pushed by the bar widget, which owns the settings) ----
 
   property string hubUrl: ""
+  // The hub the daemon actually syncs with (its hello reply): the URL phones open.
+  property string activeHub: ""
   property string dataDirSetting: ""
   property string daemonSetting: ""
   property bool configured: false
@@ -283,6 +285,13 @@ Item {
   function moveFolder(folder, parent) { request("folder.move", { folder: folder, parent: parent || null }, null) }
   function deleteFolder(folder) { request("folder.delete", { folder: folder }, null) }
 
+  // The module matrix for `text`: { size, rows: ["0101…"] }, or null.
+  function qrCode(text, callback) {
+    request("qr", { text: String(text || "") }, function(reply) {
+      callback(reply.ok ? { size: reply.size, rows: reply.rows } : null)
+    })
+  }
+
   function search(query, callback) {
     request("search", { q: query }, function(reply) {
       callback(reply.ok ? Model.idSet(reply.ids) : ({}))
@@ -396,6 +405,7 @@ Item {
         return
       }
       root.replica = String(reply.replica || "")
+      root.activeHub = String(reply.hub || "")
       root.daemonState = "ready"
       root.restartAttempt = 0
       root.lastError = ""

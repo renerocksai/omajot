@@ -3,10 +3,12 @@
 const std = @import("std");
 const hub = @import("hub/hub.zig");
 const daemon = @import("daemon/daemon.zig");
+const qrcli = @import("qrcli.zig");
 
 const usage =
     \\usage: omajot hub --port 8787 --data <dir> --login <tailscale login> [--web <dir>]
     \\       omajot daemon --hub <url> [--data <dir>]
+    \\       omajot qr [url]    (the hub URL as a QR code for your phone)
     \\
 ;
 
@@ -26,6 +28,7 @@ pub fn main(init: std.process.Init) !void {
     const rest = args.items[1..];
     if (std.mem.eql(u8, args.items[0], "hub")) return hub.main(init, rest);
     if (std.mem.eql(u8, args.items[0], "daemon")) return daemon.main(init, rest);
+    if (std.mem.eql(u8, args.items[0], "qr")) return qrcli.main(init, rest);
     std.debug.print("{s}", .{usage});
     std.process.exit(2);
 }
@@ -33,4 +36,5 @@ pub fn main(init: std.process.Init) !void {
 test {
     _ = hub;
     _ = daemon;
+    _ = qrcli;
 }

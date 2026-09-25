@@ -44,6 +44,16 @@ FocusScope {
 
   // Inline folder rename, and the folder picker ("move note / folder to…").
   property string renamingFolder: ""
+  // The "open on your phone" QR overlay.
+  property bool phoneOpen: false
+  property var phoneQr: null
+
+  function showPhone() {
+    if (!service || service.activeHub === "") return
+    phoneOpen = true
+    phoneQr = null
+    service.qrCode(service.activeHub, function(code) { root.phoneQr = code })
+  }
   property var picker: null   // { kind: "note"|"folder", id, title }
   property string confirmDeleteFolder: ""
 
@@ -285,13 +295,14 @@ FocusScope {
       return
     }
     if (event.key === Qt.Key_Escape) {
-      if (root.picker) root.picker = null
+      if (root.phoneOpen) root.phoneOpen = false
+      else if (root.picker) root.picker = null
       else if (root.confirmDeleteFolder !== "") root.confirmDeleteFolder = ""
       else root.closeRequested()
       event.accepted = true
       return
     }
-    if (root.picker) return
+    if (root.picker || root.phoneOpen) return
     var text = event.text
     if (event.key === Qt.Key_Down || text === "j") root.activePane === 0 ? root.moveSourceSelection(1) : root.moveNoteSelection(1)
     else if (event.key === Qt.Key_Up || text === "k") root.activePane === 0 ? root.moveSourceSelection(-1) : root.moveNoteSelection(-1)
@@ -336,6 +347,20 @@ FocusScope {
         font.family: root.fontFamily
         font.pixelSize: Style.font.subtitle
         font.bold: true
+      }
+
+      PanelActionButton {
+        id: phoneButton
+        anchors.right: parent.right
+        anchors.verticalCenter: brand.verticalCenter
+        size: Style.space(22)
+        fontSize: Style.font.bodySmall
+        visible: root.service !== null && root.service.activeHub !== ""
+        iconText: Model.GLYPH.phone
+        tooltipText: "Open omajot on your phone"
+        foreground: root.foreground
+        fontFamily: root.fontFamily
+        onClicked: root.showPhone()
       }
 
       Text {
@@ -866,6 +891,85 @@ FocusScope {
               onClicked: root.pickFolder(modelData.id)
             }
           }
+        }
+      }
+    }
+  }
+
+  // ------------------------------------------------- open on your phone
+
+  Rectangle {
+    anchors.fill: parent
+    visible: root.phoneOpen
+    color: Qt.rgba(0, 0, 0, 0.55)
+    MouseArea { anchors.fill: parent; onClicked: root.phoneOpen = false }
+
+    Rectangle {
+      anchors.centerIn: parent
+      width: phoneColumn.implicitWidth + Style.space(32)
+      height: phoneColumn.implicitHeight + Style.space(28)
+      radius: Style.cornerRadius
+      color: root.background
+      border.width: 1
+      border.color: Style.normalBorderFor(root.foreground, root.accent)
+      MouseArea { anchors.fill: parent }
+
+      Column {
+        id: phoneColumn
+        anchors.centerIn: parent
+        spacing: Style.space(10)
+
+        Text {
+          anchors.horizontalCenter: parent.horizontalCenter
+          text: "Open omajot on your phone"
+          color: root.foreground
+          font.family: root.fontFamily
+          font.pixelSize: Style.font.bodySmall
+          font.bold: true
+        }
+
+        // Black on white whatever the theme, whole-pixel modules, 4-module quiet zone.
+        Canvas {
+          id: qrCanvas
+          readonly property int modules: root.phoneQr ? root.phoneQr.size + 8 : 0
+          readonly property int scale: modules > 0 ? Math.max(3, Math.floor(Style.space(260) / modules)) : 0
+          anchors.horizontalCenter: parent.horizontalCenter
+          width: modules * scale
+          height: width
+          visible: root.phoneQr !== null
+          onPaint: {
+            var ctx = getContext("2d")
+            ctx.fillStyle = "#ffffff"
+            ctx.fillRect(0, 0, width, height)
+            if (!root.phoneQr) return
+            ctx.fillStyle = "#000000"
+            var rows = root.phoneQr.rows
+            for (var y = 0; y < rows.length; y++)
+              for (var x = 0; x < rows[y].length; x++)
+                if (rows[y].charAt(x) === "1") ctx.fillRect((x + 4) * scale, (y + 4) * scale, scale, scale)
+          }
+          Connections {
+            target: root
+            function onPhoneQrChanged() { qrCanvas.requestPaint() }
+          }
+        }
+
+        TextEdit {
+          anchors.horizontalCenter: parent.horizontalCenter
+          text: root.service ? root.service.activeHub : ""
+          readOnly: true
+          selectByMouse: true
+          color: root.accent
+          font.family: root.fontFamily
+          font.pixelSize: Style.font.caption
+        }
+
+        Text {
+          anchors.horizontalCenter: parent.horizontalCenter
+          text: "Scan with the camera, then Share → Add to Home Screen"
+          color: root.muted
+          font.family: root.fontFamily
+          font.pixelSize: Style.font.caption
         }
       }
     }

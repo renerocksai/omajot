@@ -68,6 +68,7 @@ covers ASCII and Latin-1. `updated` changes on text edits only (not on pin, move
 | `folder.delete` | `folder` | – (its notes move to `folder: null`, subfolders to its parent) |
 | `search` | `q` | `ids: ["n-…"]`, case-insensitive substring over title + body, updated desc, trashed included |
 | `paste` | `note`, `pos` | `ins` (markdown to insert). **Daemon only**, the daemon handles it itself (clipboard → attachments) and never forwards it to the engine. The client then sends the text as an ordinary `edit` |
+| `qr` | `text` (≤ 213 bytes) | `size`, `rows: ["0101…"]` (1 = dark module, no quiet zone): a QR code, byte mode, level M, versions 1–10. Used for "open on your phone" |
 | `attach` | `path` (a local file) | `name` (`attachments/<sha256>.<ext>`). **Daemon only**: copies the file into the attachments and queues its upload |
 | `status` | – | `sync`: `"online"`\|`"connecting"`\|`"offline"`, `hub`, `pending` (unsent batches), `head`. **Answered by the shell** (daemon / PWA); the engine only returns offline placeholders |
 
@@ -190,8 +191,8 @@ result = pointer to [u32 LE length][bytes]; 0 = out of memory
 
 | | |
 |---|---|
-| Binary | one `omajot` executable: `omajot hub …`, `omajot daemon …` |
-| Hub | `omajot hub --port 8787 --data <dir> --login <tailscale login> [--web <dir>] [--bind 127.0.0.1] [--timeout-ms N] [--no-auth (loopback only)]`; data: `<dir>/batches.jsonl`, `<dir>/blobs/`. Request bodies are capped at 1 MiB because bounded/http reserves and touches 2 × `max_body` per connection at startup (16 MiB cost ~800 MB RSS) |
+| Binary | one `omajot` executable: `omajot hub …`, `omajot daemon …`, `omajot qr [url]` (URL + terminal QR code; default: the configured hub) |
+| Hub | `omajot hub --port 8787 --data <dir> --login <tailscale login> [--web <dir>] [--bind 127.0.0.1] [--timeout-ms N] [--url <public url>] [--no-auth (loopback only)]`; prints its phone URL and QR code at startup (`--url`, else found in `tailscale serve status`); data: `<dir>/batches.jsonl`, `<dir>/blobs/`. Request bodies are capped at 1 MiB because bounded/http reserves and touches 2 × `max_body` per connection at startup (16 MiB cost ~800 MB RSS) |
 | Config | `$XDG_CONFIG_HOME/omajot/config.json` (`~/.config/omajot/config.json`), all fields optional: `{"hub": "<url>", "data": "<dir, ~/ allowed>"}`. Precedence: command-line flag, then config, then built-in default. The plugin passes `--hub` only when its `hubUrl` setting is non-empty |
 | Import | `tools/import_joplin.py`: Joplin profile → omajot through a daemon (folders, created/updated times, `# Title` first line, tags → `#hashtags`, resources → attachments); rerunnable via `<data>/import-joplin.json` |
 | Daemon | `omajot daemon [--hub <url> \| --no-hub] [--data <dir>]`, data default `$XDG_DATA_HOME/omajot` (`~/.local/share/omajot`): `replica.json` (id, cursor, next bseq), `ops.jsonl` (every ingested or local ops array, one per line, replayed on start), `outbox.jsonl`, `attachments/` |

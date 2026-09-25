@@ -28,6 +28,7 @@ const Writer = std.Io.Writer;
 const text = @import("text.zig");
 const rga = @import("rga.zig");
 const ot = @import("ot.zig");
+const qr = @import("qr.zig");
 
 pub const Id = rga.Id;
 pub const version = "0.1.0";
@@ -312,6 +313,10 @@ pub const Engine = struct {
             try self.localFolderSet(f.id, "deleted", .{ .boolean = true }, now);
         } else if (eql(u8, cmd, "search")) {
             try self.writeSearch(try getStr(obj, "q"), w);
+        } else if (eql(u8, cmd, "qr")) {
+            const code = qr.encode(try getStr(obj, "text")) catch return error.QrTextTooLong;
+            try w.writeByte(',');
+            try qr.writeRowsJson(w, &code);
         } else if (eql(u8, cmd, "paste")) {
             return error.NotHandledByEngine;
         } else if (eql(u8, cmd, "status")) {

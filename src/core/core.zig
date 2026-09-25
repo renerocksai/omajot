@@ -3,6 +3,7 @@
 pub const engine = @import("engine.zig");
 pub const Engine = engine.Engine;
 pub const html_md = @import("html_md.zig");
+pub const qr = @import("qr.zig");
 pub const text = @import("text.zig");
 pub const rga = @import("rga.zig");
 pub const ot = @import("ot.zig");
@@ -10,6 +11,7 @@ pub const ot = @import("ot.zig");
 test {
     _ = engine;
     _ = html_md;
+    _ = qr;
     _ = text;
     _ = rga;
     _ = ot;

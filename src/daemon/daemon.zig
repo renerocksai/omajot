@@ -521,19 +521,19 @@ const Options = struct {
 };
 
 /// `config.json` in `$XDG_CONFIG_HOME/omajot` or `~/.config/omajot`; every field optional.
-const Config = struct {
+pub const Config = struct {
     hub: ?[]const u8 = null,
     data: ?[]const u8 = null,
 };
 
-fn configPath(gpa: Allocator, env: *std.process.Environ.Map) ![]u8 {
+pub fn configPath(gpa: Allocator, env: *std.process.Environ.Map) ![]u8 {
     if (env.get("XDG_CONFIG_HOME")) |xdg| if (xdg.len > 0) return std.fs.path.join(gpa, &.{ xdg, "omajot", "config.json" });
     const home = env.get("HOME") orelse return error.NoHome;
     return std.fs.path.join(gpa, &.{ home, ".config", "omajot", "config.json" });
 }
 
 /// A missing file is an empty config; a malformed one is an error.
-fn readConfig(arena: Allocator, io: Io, path: []const u8) !Config {
+pub fn readConfig(arena: Allocator, io: Io, path: []const u8) !Config {
     const bytes = Io.Dir.cwd().readFileAlloc(io, path, arena, .limited(64 * 1024)) catch |err| switch (err) {
         error.FileNotFound => return .{},
         else => return err,

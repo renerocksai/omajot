@@ -44,6 +44,7 @@ export const GLYPH = {
   move: "\uf08e",
   menu: "\uf0c9",
   // Task boxes in the preview (Font Awesome square-o / check-square).
+  phone: "\uf10b",
   taskOpen: "\uf096",
   taskDone: "\uf14a"
 }

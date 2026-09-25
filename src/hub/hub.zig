@@ -12,6 +12,8 @@ pub const store = @import("store.zig");
 pub const blobs = @import("blobs.zig");
 pub const static = @import("static.zig");
 pub const rawjson = @import("rawjson.zig");
+pub const tsurl = @import("tsurl.zig");
+const qrcli = @import("../qrcli.zig");
 
 // Explicit limits. See also store.max_* and blobs.max_blob_bytes.
 pub const max_subscribers = 64;
@@ -29,13 +31,15 @@ pub const max_body: u32 = @intCast(@max(store.max_batch_bytes, blobs.max_chunk_b
 
 const usage =
     \\usage: omajot hub [--port 8787] [--data <dir>] (--login <tailscale login> | --no-auth)
-    \\                  [--web <dir>] [--bind 127.0.0.1]
+    \\                  [--web <dir>] [--bind 127.0.0.1] [--url <public url>]
     \\
     \\  --login    only requests whose Tailscale-User-Login equals this may use /api/*
     \\  --no-auth  skip the identity check (local development; loopback only)
     \\  --data     batches.jsonl and blobs/ live here (default: ./omajot-data)
     \\  --web      the PWA to serve (default: web/dist of this checkout, if present)
     \\  --timeout-ms  request deadline (default 120000); SSE streams end cleanly before it
+    \\  --url    the URL phones use, printed with a QR code at startup
+    \\           (default: found in `tailscale serve status`)
     \\
 ;
 
@@ -368,6 +372,7 @@ const Options = struct {
     no_auth: bool = false,
     web_dir: ?[]const u8 = null,
     timeout_ms: u32 = request_timeout_ms,
+    url: ?[]const u8 = null,
 };
 
 fn parseOptions(args: []const []const u8) !Options {
@@ -401,6 +406,8 @@ fn parseOptions(args: []const []const u8) !Options {
             options.login = v;
         } else if (std.mem.eql(u8, name, "--web")) {
             options.web_dir = v;
+        } else if (std.mem.eql(u8, name, "--url")) {
+            options.url = v;
         } else if (std.mem.eql(u8, name, "--timeout-ms")) {
             options.timeout_ms = try std.fmt.parseInt(u32, v, 10);
             if (options.timeout_ms < 2000) return error.TimeoutTooShort;
@@ -409,6 +416,23 @@ fn parseOptions(args: []const []const u8) !Options {
     if (options.no_auth == (options.login != null)) return error.NeedLoginOrNoAuth;
     if (options.no_auth and options.bind[0] != 127) return error.NoAuthRequiresLoopback;
     return options;
+}
+
+/// The URL and QR code for phones, on stderr next to the READY line.
+fn printPhoneUrl(gpa: Allocator, io: Io, explicit: ?[]const u8, port: u16) void {
+    const detected = if (explicit == null) tsurl.detect(gpa, io, port) else null;
+    defer if (detected) |d| gpa.free(d);
+    const url = explicit orelse detected orelse {
+        std.debug.print("omajot hub: no public URL (publish it with `tailscale serve --bg --https=8443 http://127.0.0.1:{d}`, or pass --url)\n", .{port});
+        return;
+    };
+    var buffer: [16 * 1024]u8 = undefined;
+    var aw: Io.Writer = .fixed(&buffer);
+    qrcli.write(&aw, "omajot on your phone (scan, then Share → Add to Home Screen):", url) catch {
+        std.debug.print("omajot hub: phones open {s}\n", .{url});
+        return;
+    };
+    std.debug.print("{s}\n", .{aw.buffered()});
 }
 
 /// `<repo>/web/dist` when this binary is `<repo>/zig-out/bin/omajot`.
@@ -515,6 +539,7 @@ pub fn main(init: std.process.Init, args: []const []const u8) !void {
         app.port(),              web.backend_name,                        options.data,
         shared.log.head(),       web_dir orelse "(none)",                 options.login orelse "OFF (--no-auth)",
     });
+    printPhoneUrl(gpa, io, options.url, app.port());
     app.run() catch |err| {
         // Storage may still be borrowed by the engine: never unwind into deinit.
         std.debug.print("omajot hub: FATAL {s}\n", .{@errorName(err)});
@@ -527,6 +552,7 @@ test {
     _ = blobs;
     _ = static;
     _ = rawjson;
+    _ = tsurl;
 }
 
 test "parseOptions" {

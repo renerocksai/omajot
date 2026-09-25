@@ -541,3 +541,21 @@ test "create keeps imported created/updated times, on every replica" {
         try testing.expect(std.mem.find(u8, out.items, "\"ok\":false") != null);
     }
 }
+
+test "qr returns a square module matrix; too-long text is a request error" {
+    var arena_state = std.heap.ArenaAllocator.init(testing.allocator);
+    defer arena_state.deinit();
+    const arena = arena_state.allocator();
+    var e = try Engine.init(testing.allocator, 0xa);
+    defer e.deinit();
+    const reply = try replyValue(arena, try call(&e, arena, 1, "{{\"id\":1,\"cmd\":\"qr\",\"text\":\"https://h.tailnet.ts.net:8443\"}}", .{}));
+    const size: usize = @intCast(reply.get("size").?.integer);
+    const rows = reply.get("rows").?.array.items;
+    try testing.expect(size >= 21);
+    try testing.expectEqual(size, rows.len);
+    for (rows) |row| try testing.expectEqual(size, row.string.len);
+
+    const long = "x" ** 400;
+    const bad = try call(&e, arena, 1, "{{\"id\":2,\"cmd\":\"qr\",\"text\":\"{s}\"}}", .{long});
+    try testing.expect(std.mem.find(u8, bad, "\"ok\":false") != null);
+}

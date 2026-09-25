@@ -32,7 +32,8 @@ const qr = @import("qr.zig");
 const invite = @import("invite.zig");
 
 pub const Id = rga.Id;
-pub const version = "0.1.0";
+/// From build.zig.zon (build.zig passes it as build_options.version).
+pub const version = @import("build_options").version;
 
 const Stamp = struct {
     t: i64,

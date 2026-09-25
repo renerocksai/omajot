@@ -22,6 +22,17 @@ jobs:
         with:
           version: 0.16.0
 
+      - name: Check that the tag matches the version
+        run: |
+          set -eu
+          want=${GITHUB_REF_NAME#v}
+          zon=$(sed -n 's/^    \.version = "\(.*\)",$/\1/p' build.zig.zon)
+          manifest=$(python3 -c 'import json; print(json.load(open("manifest.json"))["version"])')
+          web=$(python3 -c 'import json; print(json.load(open("web/package.json"))["version"])')
+          echo "tag $want, build.zig.zon $zon, manifest.json $manifest, web/package.json $web"
+          [ "$zon" = "$want" ] && [ "$manifest" = "$want" ] && [ "$web" = "$want" ] \
+            || { echo "::error::run tools/bump-version.sh $want and commit before tagging"; exit 1; }
+
       - name: Test
         run: zig build test
 

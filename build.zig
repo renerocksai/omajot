@@ -1,5 +1,8 @@
 const std = @import("std");
 const builtin = @import("builtin");
+// The one version source: engine and daemon get it as build_options.version;
+// tools/bump-version.sh keeps manifest.json and web/package.json in step.
+const zon = @import("build.zig.zon");
 
 // One `omajot` binary (`omajot hub`, `omajot daemon`), core.wasm for the PWA,
 // and the tests. Parts: src/core (pure), src/hub (baz), src/daemon, src/wasm.
@@ -16,10 +19,14 @@ pub fn build(b: *std.Build) void {
     // only glibc builds need LLVM/LLD. musl uses Zig's own crt.
     const glibc = target.result.os.tag == .linux and target.result.abi.isGnu();
 
+    const options = b.addOptions();
+    options.addOption([]const u8, "version", zon.version);
+
     const core = b.createModule(.{
         .root_source_file = b.path("src/core/core.zig"),
         .target = target,
         .optimize = optimize,
+        .imports = &.{.{ .name = "build_options", .module = options.createModule() }},
     });
     const baz = b.dependency("baz", .{ .target = target, .optimize = optimize }).module("baz");
 
@@ -59,6 +66,7 @@ pub fn build(b: *std.Build) void {
                 .root_source_file = b.path("src/core/core.zig"),
                 .target = wasm_target,
                 .optimize = .ReleaseSmall,
+                .imports = &.{.{ .name = "build_options", .module = options.createModule() }},
             }) }},
         }),
     });

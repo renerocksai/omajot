@@ -16,7 +16,7 @@ pub const attachments = @import("attachments.zig");
 pub const hubclient = @import("hubclient.zig");
 pub const paste = @import("paste.zig");
 
-pub const version = "0.1.0";
+pub const version = @import("core").engine.version;
 pub const max_line_bytes: usize = 16 << 20;
 pub const page_limit = 200;
 /// Idle pull interval even without doorbell (safety net).

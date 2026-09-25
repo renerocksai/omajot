@@ -30,6 +30,7 @@ const rga = @import("rga.zig");
 const ot = @import("ot.zig");
 const qr = @import("qr.zig");
 const invite = @import("invite.zig");
+const diff = @import("diff.zig");
 
 pub const Id = rga.Id;
 /// From build.zig.zon (build.zig passes it as build_options.version).
@@ -155,6 +156,8 @@ pub const Engine = struct {
     new_ops: std.ArrayList(u8) = .empty,
     dirty_notes: std.AutoArrayHashMapUnmanaged(Id, void) = .empty,
     folders_dirty: bool = false,
+    /// Patch events made by a request (`put` on an open note), sent after its reply.
+    extra_events: std.ArrayList(u8) = .empty,
 
     pub fn init(gpa: Allocator, replica: u64) !Engine {
         return .{ .gpa = gpa, .replica = replica };
@@ -177,6 +180,7 @@ pub const Engine = struct {
         self.pending.deinit(gpa);
         self.new_ops.deinit(gpa);
         self.dirty_notes.deinit(gpa);
+        self.extra_events.deinit(gpa);
         self.* = undefined;
     }
 
@@ -239,6 +243,12 @@ pub const Engine = struct {
         try self.flushEvents(w);
     }
 
+    /// The visible text of a note as UTF-8 (owned by the engine), or null.
+    pub fn noteText(self: *Engine, note: Id) !?[]const u8 {
+        const n = self.notes.get(note) orelse return null;
+        return try n.textUtf8(self.gpa);
+    }
+
     pub fn takeNewOps(self: *Engine, gpa: Allocator) ![]u8 {
         const result = try std.mem.concat(gpa, u8, &.{ "[", self.new_ops.items, "]" });
         self.new_ops.clearRetainingCapacity();
@@ -261,6 +271,12 @@ pub const Engine = struct {
             try w.writeAll(",\"text\":");
             try json.Stringify.encodeJsonString(try n.textUtf8(self.gpa), .{}, w);
             try w.print(",\"seq\":{d},\"pseq\":{d}", .{ n.last_seq, n.pseq });
+        } else if (eql(u8, cmd, "read")) {
+            const n = try self.getNote(obj, "note");
+            try w.writeAll(",\"text\":");
+            try json.Stringify.encodeJsonString(try n.textUtf8(self.gpa), .{}, w);
+        } else if (eql(u8, cmd, "put")) {
+            try self.cmdPut(obj, now, w);
         } else if (eql(u8, cmd, "close")) {
             const n = try self.getNote(obj, "note");
             n.open = false;
@@ -384,6 +400,45 @@ pub const Engine = struct {
                 .del => try self.localDelete(n, p.pos, p.len, now),
             }
         }
+    }
+
+    /// Replace a note's whole text, applied as the smallest edits (core/diff).
+    /// With `base` (the text the writer started from) it is a three-way
+    /// merge: changes made since `base` by others stay. An open session gets
+    /// the edits as patch events.
+    fn cmdPut(self: *Engine, obj: json.ObjectMap, now: i64, w: *Writer) !void {
+        const n = try self.getNote(obj, "note");
+        var arena_state = std.heap.ArenaAllocator.init(self.gpa);
+        defer arena_state.deinit();
+        const arena = arena_state.allocator();
+        const cur = try n.seq.toUtf16(arena);
+        const new = try text.toUtf16(arena, try getStr(obj, "text"));
+        const prims = if (obj.get("base")) |bv| blk: {
+            const base = try text.toUtf16(arena, switch (bv) {
+                .string => |s| s,
+                else => return error.BadRequest,
+            });
+            const theirs = try diff.edits(arena, base, cur);
+            const mine = try diff.edits(arena, base, new);
+            break :blk (try ot.xform(arena, mine, theirs, false)).a;
+        } else try diff.edits(arena, cur, new);
+
+        var ev = Writer.Allocating.fromArrayList(self.gpa, &self.extra_events);
+        defer self.extra_events = ev.toArrayList();
+        for (prims) |p| {
+            switch (p.kind) {
+                .ins => {
+                    if (p.pos > n.seq.visible) return error.OutOfRange;
+                    try self.localInsert(n, p.pos, p.text, now);
+                },
+                .del => {
+                    if (p.pos + p.len > n.seq.visible) return error.OutOfRange;
+                    try self.localDelete(n, p.pos, p.len, now);
+                },
+            }
+            if (n.open) try self.emitPatch(n, p, &ev.writer);
+        }
+        try w.print(",\"changed\":{}", .{prims.len > 0});
     }
 
     /// Reject a primitive whose boundary would split a surrogate pair,
@@ -902,6 +957,10 @@ pub const Engine = struct {
     }
 
     fn flushEvents(self: *Engine, w: *Writer) !void {
+        if (self.extra_events.items.len > 0) {
+            try w.writeAll(self.extra_events.items);
+            self.extra_events.clearRetainingCapacity();
+        }
         if (self.dirty_notes.count() == 0 and !self.folders_dirty) return;
         var t = try self.tree();
         defer t.deinit(self.gpa);

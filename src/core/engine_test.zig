@@ -492,6 +492,98 @@ test "property: a client's text matches the engine while edits and remote patche
     try testing.expect(total_crossed > 1000);
 }
 
+test "put replaces the text as small edits; with base it keeps other changes" {
+    var arena_state = std.heap.ArenaAllocator.init(testing.allocator);
+    defer arena_state.deinit();
+    const arena = arena_state.allocator();
+    var e = try Engine.init(testing.allocator, 7);
+    defer e.deinit();
+    const note = (try replyValue(arena, try call(&e, arena, 10, "{{\"id\":1,\"cmd\":\"create\",\"text\":\"a\\nb\\nc\\n\"}}", .{}))).get("note").?.string;
+    _ = try e.takeNewOps(arena);
+
+    const read = try replyValue(arena, try call(&e, arena, 11, "{{\"id\":2,\"cmd\":\"read\",\"note\":\"{s}\"}}", .{note}));
+    try testing.expectEqualStrings("a\nb\nc\n", read.get("text").?.string);
+
+    // Someone else changes line 2 after the writer read the text.
+    _ = try replyValue(arena, try call(&e, arena, 12, "{{\"id\":3,\"cmd\":\"edit\",\"note\":\"{s}\",\"seq\":1,\"pos\":2,\"del\":1,\"ins\":\"B\"}}", .{note}));
+    _ = try e.takeNewOps(arena);
+    const put = try replyValue(arena, try call(&e, arena, 13, "{{\"id\":4,\"cmd\":\"put\",\"note\":\"{s}\",\"base\":\"a\\nb\\nc\\n\",\"text\":\"a\\nb\\nc\\nd\\n\"}}", .{note}));
+    try testing.expect(put.get("changed").?.bool);
+    try testing.expectEqualStrings("a\nB\nc\nd\n", try textOf(&e, arena, note));
+    // The op is one small insert, not a rewrite.
+    const ops = try e.takeNewOps(arena);
+    try testing.expect(std.mem.find(u8, ops, "\"s\":\"d\\n\"") != null);
+    try testing.expect(std.mem.find(u8, ops, "\"k\":\"del\"") == null);
+
+    // Without base: the text becomes exactly the new text.
+    _ = try replyValue(arena, try call(&e, arena, 14, "{{\"id\":5,\"cmd\":\"put\",\"note\":\"{s}\",\"text\":\"x\\n\"}}", .{note}));
+    try testing.expectEqualStrings("x\n", try textOf(&e, arena, note));
+    const same = try replyValue(arena, try call(&e, arena, 15, "{{\"id\":6,\"cmd\":\"put\",\"note\":\"{s}\",\"text\":\"x\\n\"}}", .{note}));
+    try testing.expect(!same.get("changed").?.bool);
+}
+
+test "property: put on an open note reaches the client as patches that merge with its edits" {
+    const gpa = testing.allocator;
+    var seed: u64 = 1;
+    while (seed <= 60) : (seed += 1) {
+        var arena_state = std.heap.ArenaAllocator.init(gpa);
+        defer arena_state.deinit();
+        const arena = arena_state.allocator();
+        var prng = std.Random.DefaultPrng.init(seed);
+        const rnd = prng.random();
+        var e = try Engine.init(gpa, 3);
+        defer e.deinit();
+        const note = (try replyValue(arena, try call(&e, arena, 10, "{{\"id\":1,\"cmd\":\"create\",\"text\":\"one 🎉\\ntwo\\nthree\\n\"}}", .{}))).get("note").?.string;
+        const opened = try replyValue(arena, try call(&e, arena, 11, "{{\"id\":2,\"cmd\":\"open\",\"note\":\"{s}\"}}", .{note}));
+        var client: Client = .{ .gpa = gpa, .arena = arena, .note = note };
+        defer client.text.deinit(gpa);
+        try client.text.appendSlice(gpa, try text.toUtf16(arena, opened.get("text").?.string));
+
+        var to_engine: std.ArrayList([]const u8) = .empty;
+        var to_client: std.ArrayList(json.ObjectMap) = .empty;
+        var now: i64 = 100;
+        var step: usize = 0;
+        while (step < 40 or to_engine.items.len + to_client.items.len > 0) : (step += 1) {
+            now += 1;
+            const choice = if (step < 40) rnd.uintLessThan(u8, 4) else 2 + rnd.uintLessThan(u8, 2);
+            switch (choice) {
+                0 => try to_engine.append(arena, try client.edit(rnd)),
+                1 => { // a CLI writer: read, change one line, put with base
+                    const cur = (try replyValue(arena, try call(&e, arena, now, "{{\"id\":3,\"cmd\":\"read\",\"note\":\"{s}\"}}", .{note}))).get("text").?.string;
+                    var new: std.ArrayList(u8) = .empty;
+                    try new.appendSlice(arena, cur);
+                    const at = rnd.uintLessThan(usize, cur.len + 1);
+                    var cut = at;
+                    while (cut > 0 and (new.items[cut - 1] & 0xC0) == 0x80) cut -= 1;
+                    while (cut < new.items.len and (new.items[cut] & 0xC0) == 0x80) cut += 1;
+                    try new.insertSlice(arena, cut, "W\n");
+                    var body: std.Io.Writer.Allocating = .init(arena);
+                    try std.json.Stringify.encodeJsonString(new.items, .{}, &body.writer);
+                    var base: std.Io.Writer.Allocating = .init(arena);
+                    try std.json.Stringify.encodeJsonString(cur, .{}, &base.writer);
+                    const lines = try call(&e, arena, now, "{{\"id\":4,\"cmd\":\"put\",\"note\":\"{s}\",\"base\":{s},\"text\":{s}}}", .{ note, base.written(), body.written() });
+                    _ = try replyValue(arena, lines);
+                    var it = std.mem.splitScalar(u8, lines, '\n');
+                    while (it.next()) |line| {
+                        if (line.len == 0) continue;
+                        const v = try json.parseFromSliceLeaky(json.Value, arena, try arena.dupe(u8, line), .{});
+                        if (v.object.get("ev")) |ev| if (std.mem.eql(u8, ev.string, "patch")) try to_client.append(arena, v.object);
+                    }
+                },
+                2 => if (to_engine.items.len > 0) {
+                    _ = try replyValue(arena, try call(&e, arena, now, "{s}", .{to_engine.orderedRemove(0)}));
+                },
+                else => if (to_client.items.len > 0) try client.onPatch(to_client.orderedRemove(0)),
+            }
+        }
+        const engine_text = try e.notes.get(try engine_mod.parseNoteId(note)).?.seq.toUtf16(arena);
+        testing.expectEqualSlices(u16, engine_text, client.text.items) catch |err| {
+            std.debug.print("client diverged after put, seed {d}\n", .{seed});
+            return err;
+        };
+    }
+}
+
 fn noteTimes(e: *Engine, arena: Allocator, now: i64, note: []const u8) ![2]i64 {
     const list = try replyValue(arena, try call(e, arena, now, "{{\"id\":90,\"cmd\":\"list\"}}", .{}));
     for (list.get("notes").?.array.items) |item| {

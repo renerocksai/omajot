@@ -30,6 +30,8 @@ ROOT = Path(__file__).resolve().parents[1]
 SITE = ROOT / "site"
 OUT = ROOT / "_site"
 REPO = "https://github.com/renerocksai/omajot"
+# Where GitHub Pages serves the site (custom domain); link previews need absolute URLs.
+SITE_URL = "https://renerocks.ai/omajot/"
 ORDER = ["index", "get-started", "using", "cli", "under-the-hood"]
 
 
@@ -117,7 +119,9 @@ def main():
             f'<a href="{other}.html"{" aria-current=\"page\"" if other == name else ""}>{html.escape(pages[other][0]["nav"])}</a>'
             for other in ORDER)
         page = template
+        url = SITE_URL + ("" if name == "index" else f"{name}.html")
         for key, value in (("title", meta["title"]), ("description", meta["description"]),
+                           ("url", url), ("image", SITE_URL + "assets/og-card.jpg"),
                            ("nav", nav), ("page", name), ("repo", REPO), ("content", body)):
             page = page.replace("{{" + key + "}}", value)
         (OUT / f"{name}.html").write_text(expand(page))

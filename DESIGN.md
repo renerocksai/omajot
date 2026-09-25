@@ -363,9 +363,9 @@ For a hub that must survive reboots without a login:
 - **Hub reads `--web` only at startup**: every PWA deploy needs a hub restart (reload on SIGHUP?).
 - **Engine**: split very large inserts so an ops array always fits in a 1 MiB batch;
   RGA → Fugue to avoid interleaving; counted tree for O(log n) position lookup.
-- **PWA**: preview renders the line after an ATX heading in heading size (a paragraph in
-  CommonMark); `app.js` is 555 KiB (lang-markdown pulls in HTML/CSS/JS modes); remote images
-  in pasted HTML stay links (CORS); Add-to-Home-Screen and the toolbar above the iOS keyboard untested.
+- **PWA**: remote images in pasted HTML stay links (CORS); Add-to-Home-Screen and the
+  toolbar above the iOS keyboard untested. (Fixed: the first-paragraph title styling,
+  setext headings, hard breaks, parenthesised URLs; `app.js` 555 → 372 KiB.)
 - **Plugin**: keyboard-driven checks still to do by hand: a main-window session, Ctrl+V,
   preview checkbox clicks, Ctrl+B/I, folder rename/move/delete, images in the preview.
 - **Hub**: snapshots/compaction, start at boot.

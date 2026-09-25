@@ -491,3 +491,53 @@ test "property: a client's text matches the engine while edits and remote patche
     try testing.expect(total_patches > 1000);
     try testing.expect(total_crossed > 1000);
 }
+
+fn noteTimes(e: *Engine, arena: Allocator, now: i64, note: []const u8) ![2]i64 {
+    const list = try replyValue(arena, try call(e, arena, now, "{{\"id\":90,\"cmd\":\"list\"}}", .{}));
+    for (list.get("notes").?.array.items) |item| {
+        const o = item.object;
+        if (std.mem.eql(u8, o.get("id").?.string, note)) return .{ o.get("created").?.integer, o.get("updated").?.integer };
+    }
+    return error.NoteMissing;
+}
+
+test "create keeps imported created/updated times, on every replica" {
+    var arena_state = std.heap.ArenaAllocator.init(testing.allocator);
+    defer arena_state.deinit();
+    const arena = arena_state.allocator();
+    var a = try Engine.init(testing.allocator, 0xa);
+    defer a.deinit();
+    var b = try Engine.init(testing.allocator, 0xb);
+    defer b.deinit();
+
+    const now: i64 = 1_790_000_000_000;
+    const reply = try call(&a, arena, now, "{{\"id\":1,\"cmd\":\"create\",\"folder\":null,\"text\":\"Old note\\nbody\",\"created\":1000,\"updated\":5000}}", .{});
+    const note = (try replyValue(arena, reply)).get("note").?.string;
+    try testing.expectEqual([2]i64{ 1000, 5000 }, try noteTimes(&a, arena, now, note));
+
+    const ops = try a.takeNewOps(testing.allocator);
+    defer testing.allocator.free(ops);
+    var events: std.ArrayList(u8) = .empty;
+    defer events.deinit(testing.allocator);
+    try b.ingest(ops, &events);
+    try testing.expectEqual([2]i64{ 1000, 5000 }, try noteTimes(&b, arena, now, note));
+
+    // The past stamps do not hold back the clock: the next edit is "now".
+    _ = try replyValue(arena, try call(&a, arena, now, "{{\"id\":2,\"cmd\":\"open\",\"note\":\"{s}\"}}", .{note}));
+    _ = try replyValue(arena, try call(&a, arena, now + 1, "{{\"id\":3,\"cmd\":\"edit\",\"note\":\"{s}\",\"seq\":1,\"pos\":0,\"del\":0,\"ins\":\"x\"}}", .{note}));
+    try testing.expectEqual([2]i64{ 1000, now + 1 }, try noteTimes(&a, arena, now + 1, note));
+
+    // Invalid combinations are ordinary request errors.
+    const bad = [_][]const u8{
+        "{\"id\":4,\"cmd\":\"create\",\"created\":6000,\"updated\":5000}",
+        "{\"id\":5,\"cmd\":\"create\",\"created\":1000,\"updated\":1790000000001}",
+        "{\"id\":6,\"cmd\":\"create\",\"updated\":5000}",
+        "{\"id\":7,\"cmd\":\"create\",\"created\":0}",
+    };
+    for (bad) |req| {
+        var out: std.ArrayList(u8) = .empty;
+        defer out.deinit(testing.allocator);
+        try a.call(req, now, &out);
+        try testing.expect(std.mem.find(u8, out.items, "\"ok\":false") != null);
+    }
+}

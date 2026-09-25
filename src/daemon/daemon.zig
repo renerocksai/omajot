@@ -30,10 +30,14 @@ const usage =
     \\usage: omajot daemon [--hub <url>|--no-hub] [--data <dir>]
     \\
     \\  Speaks omajot's client protocol as JSON lines on stdin/stdout.
-    \\  --hub   hub base URL (default:
+    \\  --hub   hub base URL (default: "hub" in the config file, else
 ++ default_hub ++
     \\)
-    \\  --data  replica directory (default: $XDG_DATA_HOME/omajot or ~/.local/share/omajot)
+    \\  --data  replica directory (default: "data" in the config file, else
+    \\          $XDG_DATA_HOME/omajot or ~/.local/share/omajot)
+    \\
+    \\  Config file: $XDG_CONFIG_HOME/omajot/config.json or ~/.config/omajot/config.json,
+    \\  e.g. {"hub": "https://host.tailnet.ts.net:8443", "data": "~/.local/share/omajot"}
     \\
 ;
 
@@ -144,6 +148,7 @@ const Daemon = struct {
 
         if (std.mem.eql(u8, cmd, "status")) return self.status(id);
         if (std.mem.eql(u8, cmd, "paste")) return self.doPaste(id);
+        if (std.mem.eql(u8, cmd, "attach")) return self.doAttach(id, object);
         self.forward(line, id, std.mem.eql(u8, cmd, "hello"));
     }
 
@@ -235,6 +240,28 @@ const Daemon = struct {
             self.wake.set(self.io);
         }
         self.emitValue(.{ .re = id orelse 0, .ok = true, .ins = md });
+    }
+
+    /// `attach {path}`: copy a local file into the attachments and queue its
+    /// upload; reply `{name: "attachments/<sha256>.<ext>"}` for use in markdown.
+    fn doAttach(self: *Daemon, id: ?i64, object: std.json.ObjectMap) void {
+        const path = if (object.get("path")) |v| switch (v) {
+            .string => |str| str,
+            else => return self.emitError(id, "attach: path must be a string"),
+        } else return self.emitError(id, "attach: path is required");
+        const bytes = Io.Dir.cwd().readFileAlloc(self.io, path, self.gpa, .limited(attachments.max_bytes)) catch |err|
+            return self.emitError(id, @errorName(err));
+        defer self.gpa.free(bytes);
+        const dot_ext = std.fs.path.extension(path);
+        const ext = if (dot_ext.len > 1) dot_ext[1..] else attachments.sniffExt(bytes) orelse "bin";
+        const name = attachments.store(self.io, self.att_dir, bytes, ext) catch |err| return self.emitError(id, @errorName(err));
+        self.lock.lockUncancelable(self.io);
+        self.rep.addUpload(name.slice()) catch {};
+        self.lock.unlock(self.io);
+        self.wake.set(self.io);
+        var buf: [attachments.dir_name.len + 1 + name.buf.len]u8 = undefined;
+        const ref = std.fmt.bufPrint(&buf, attachments.dir_name ++ "/{s}", .{name.slice()}) catch unreachable;
+        self.emitValue(.{ .re = id orelse 0, .ok = true, .name = ref });
     }
 
     fn queueMissingAttachments(self: *Daemon, text: []const u8) void {
@@ -482,9 +509,41 @@ fn attachmentExists(d: *Daemon, name: []const u8) bool {
 }
 
 const Options = struct {
-    hub: ?[]const u8 = default_hub,
+    /// Null: not given on the command line (config file, then default_hub).
+    hub: ?[]const u8 = null,
+    no_hub: bool = false,
     data: ?[]const u8 = null,
 };
+
+/// `config.json` in `$XDG_CONFIG_HOME/omajot` or `~/.config/omajot`; every field optional.
+const Config = struct {
+    hub: ?[]const u8 = null,
+    data: ?[]const u8 = null,
+};
+
+fn configPath(gpa: Allocator, env: *std.process.Environ.Map) ![]u8 {
+    if (env.get("XDG_CONFIG_HOME")) |xdg| if (xdg.len > 0) return std.fs.path.join(gpa, &.{ xdg, "omajot", "config.json" });
+    const home = env.get("HOME") orelse return error.NoHome;
+    return std.fs.path.join(gpa, &.{ home, ".config", "omajot", "config.json" });
+}
+
+/// A missing file is an empty config; a malformed one is an error.
+fn readConfig(arena: Allocator, io: Io, path: []const u8) !Config {
+    const bytes = Io.Dir.cwd().readFileAlloc(io, path, arena, .limited(64 * 1024)) catch |err| switch (err) {
+        error.FileNotFound => return .{},
+        else => return err,
+    };
+    return std.json.parseFromSliceLeaky(Config, arena, bytes, .{ .ignore_unknown_fields = true });
+}
+
+/// Expand a leading `~/` against HOME.
+fn expandHome(gpa: Allocator, env: *std.process.Environ.Map, path: []const u8) ![]u8 {
+    if (std.mem.startsWith(u8, path, "~/")) {
+        const home = env.get("HOME") orelse return error.NoHome;
+        return std.fs.path.join(gpa, &.{ home, path[2..] });
+    }
+    return gpa.dupe(u8, path);
+}
 
 fn parseOptions(args: []const []const u8) !Options {
     var options: Options = .{};
@@ -499,7 +558,7 @@ fn parseOptions(args: []const []const u8) !Options {
         }
         if (std.mem.eql(u8, name, "-h") or std.mem.eql(u8, name, "--help")) return error.Help;
         if (std.mem.eql(u8, name, "--no-hub")) {
-            options.hub = null;
+            options.no_hub = true;
             continue;
         }
         const v = value orelse blk: {
@@ -508,7 +567,7 @@ fn parseOptions(args: []const []const u8) !Options {
             break :blk args[i];
         };
         if (std.mem.eql(u8, name, "--hub")) {
-            options.hub = if (v.len == 0) null else v;
+            if (v.len == 0) options.no_hub = true else options.hub = v;
         } else if (std.mem.eql(u8, name, "--data")) {
             options.data = v;
         } else return error.UnknownOption;
@@ -531,7 +590,16 @@ pub fn main(init: std.process.Init, args: []const []const u8) !void {
         std.process.exit(if (err == error.Help) 0 else 2);
     };
 
-    const data_rel = if (options.data) |d| try gpa.dupe(u8, d) else try defaultDataDir(gpa, init.environ_map);
+    var config_arena: std.heap.ArenaAllocator = .init(gpa);
+    defer config_arena.deinit();
+    const config_path = try configPath(config_arena.allocator(), init.environ_map);
+    const config = readConfig(config_arena.allocator(), io, config_path) catch |err| {
+        std.debug.print("omajot daemon: cannot read {s}: {s}\n", .{ config_path, @errorName(err) });
+        std.process.exit(2);
+    };
+    const hub_url: ?[]const u8 = if (options.no_hub) null else options.hub orelse config.hub orelse default_hub;
+
+    const data_rel = if (options.data orelse config.data) |d| try expandHome(gpa, init.environ_map, d) else try defaultDataDir(gpa, init.environ_map);
     defer gpa.free(data_rel);
     try Io.Dir.cwd().createDirPath(io, data_rel);
     var data_dir = try Io.Dir.cwd().openDir(io, data_rel, .{});
@@ -553,10 +621,10 @@ pub fn main(init: std.process.Init, args: []const []const u8) !void {
         .stdout = &stdout_writer.interface,
         .data_path = data_path,
         .att_dir = att_dir,
-        .hub = if (options.hub) |url| hubclient.Hub.init(gpa, io, url) else null,
+        .hub = if (hub_url) |url| hubclient.Hub.init(gpa, io, url) else null,
     };
     d.rep = try replica.Replica.open(gpa, io, data_dir, d);
-    std.log.info("omajot daemon {s}: replica {s}, data {s}, hub {s}", .{ version, &d.rep.idHex(), data_path, options.hub orelse "(none)" });
+    std.log.info("omajot daemon {s}: replica {s}, data {s}, hub {s}", .{ version, &d.rep.idHex(), data_path, hub_url orelse "(none)" });
     if (d.hub == null) d.state = .offline;
     d.syncChanged();
 
@@ -602,8 +670,25 @@ test "parseOptions" {
     const o = try parseOptions(&.{ "--hub", "http://x:1/", "--data=/tmp/d" });
     try std.testing.expectEqualStrings("http://x:1/", o.hub.?);
     try std.testing.expectEqualStrings("/tmp/d", o.data.?);
-    try std.testing.expect((try parseOptions(&.{"--no-hub"})).hub == null);
-    try std.testing.expectEqualStrings(default_hub, (try parseOptions(&.{})).hub.?);
+    try std.testing.expect((try parseOptions(&.{"--no-hub"})).no_hub);
+    try std.testing.expect((try parseOptions(&.{ "--hub", "" })).no_hub);
+    try std.testing.expect((try parseOptions(&.{})).hub == null);
+}
+
+test "readConfig: missing file is empty, fields parse, unknown fields ignored" {
+    var arena: std.heap.ArenaAllocator = .init(std.testing.allocator);
+    defer arena.deinit();
+    const io = std.testing.io;
+    const missing = try readConfig(arena.allocator(), io, "/nonexistent/omajot/config.json");
+    try std.testing.expect(missing.hub == null and missing.data == null);
+
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+    try tmp.dir.writeFile(io, .{ .sub_path = "config.json", .data = "{\"hub\":\"https://h:1\",\"data\":\"~/n\",\"theme\":1}" });
+    const path = try tmp.dir.realPathFileAlloc(io, "config.json", arena.allocator());
+    const c = try readConfig(arena.allocator(), io, path);
+    try std.testing.expectEqualStrings("https://h:1", c.hub.?);
+    try std.testing.expectEqualStrings("~/n", c.data.?);
 }
 
 test "isEmptyArray" {

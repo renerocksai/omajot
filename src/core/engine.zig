@@ -138,6 +138,10 @@ pub const Engine = struct {
     clock: u64 = 0,
     /// Highest hybrid logical time seen.
     hlc: i64 = 0,
+    /// Import only: stamp the next local ops at this past time instead of the
+    /// clock (`create` with `created`/`updated`). The ops are new, so a past
+    /// time cannot reorder existing registers; later ops stamp normally.
+    past_time: ?i64 = null,
     notes: std.AutoArrayHashMapUnmanaged(Id, *Note) = .empty,
     folders: std.AutoArrayHashMapUnmanaged(Id, *Folder) = .empty,
     /// First id of every applied op (dedupe).
@@ -269,7 +273,15 @@ pub const Engine = struct {
             } else "";
             const units = try text.toUtf16(self.gpa, body);
             defer self.gpa.free(units);
+            // Imports keep their original times: created ≤ updated ≤ now.
+            const created: ?i64 = if (obj.get("created")) |_| try getInt(obj, "created") else null;
+            const updated: ?i64 = if (obj.get("updated")) |_| try getInt(obj, "updated") else created;
+            if (created == null and updated != null) return error.BadRequest;
+            if (created) |c| if (c <= 0 or c > updated.? or updated.? > now) return error.BadRequest;
+            defer self.past_time = null;
+            self.past_time = created;
             const nid = try self.localNoteCreate(folder, now);
+            self.past_time = updated;
             if (units.len > 0) try self.localInsert(self.notes.get(nid).?, 0, units, now);
             try w.writeAll(",\"note\":");
             try writeNoteId(w, nid);
@@ -381,7 +393,8 @@ pub const Engine = struct {
     const Value = union(enum) { none, boolean: bool, folder: Id, string: []const u8 };
 
     fn nextStamp(self: *Engine, now: i64) Stamp {
-        return .{ .t = @max(now, self.hlc + 1), .r = self.replica, .c = self.clock + 1 };
+        const t = self.past_time orelse @max(now, self.hlc + 1);
+        return .{ .t = t, .r = self.replica, .c = self.clock + 1 };
     }
 
     fn opHeader(w: *Writer, kind: []const u8, s: Stamp) !void {

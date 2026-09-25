@@ -60,7 +60,7 @@ covers ASCII and Latin-1. `updated` changes on text edits only (not on pin, move
 | `open` | `note` | `text`, `seq` (last applied client edit seq for this note, initially 0), `pseq` (last patch seq, initially 0) |
 | `close` | `note` | – |
 | `edit` | `note`, `seq`, `pos`, `del`, `ins`, `ack` (optional: last `pseq` the client applied) | – |
-| `create` | `folder` (nullable), `text` (optional, default `""`) | `note` |
+| `create` | `folder` (nullable), `text` (optional, default `""`), `created` + `updated` (optional, import only: ms, `0 < created ≤ updated ≤ now`) | `note` |
 | `set` | `note` + any of `folder`, `pinned`, `trashed` | – |
 | `folder.create` | `name`, `parent` (nullable) | `folder` |
 | `folder.rename` | `folder`, `name` | – |
@@ -68,6 +68,7 @@ covers ASCII and Latin-1. `updated` changes on text edits only (not on pin, move
 | `folder.delete` | `folder` | – (its notes move to `folder: null`, subfolders to its parent) |
 | `search` | `q` | `ids: ["n-…"]`, case-insensitive substring over title + body, updated desc, trashed included |
 | `paste` | `note`, `pos` | `ins` (markdown to insert). **Daemon only**, the daemon handles it itself (clipboard → attachments) and never forwards it to the engine. The client then sends the text as an ordinary `edit` |
+| `attach` | `path` (a local file) | `name` (`attachments/<sha256>.<ext>`). **Daemon only**: copies the file into the attachments and queues its upload |
 | `status` | – | `sync`: `"online"`\|`"connecting"`\|`"offline"`, `hub`, `pending` (unsent batches), `head`. **Answered by the shell** (daemon / PWA); the engine only returns offline placeholders |
 
 **Editing.** A client may have several notes open. For each open note it numbers
@@ -191,7 +192,9 @@ result = pointer to [u32 LE length][bytes]; 0 = out of memory
 |---|---|
 | Binary | one `omajot` executable: `omajot hub …`, `omajot daemon …` |
 | Hub | `omajot hub --port 8787 --data <dir> --login <tailscale login> [--web <dir>] [--bind 127.0.0.1] [--timeout-ms N] [--no-auth (loopback only)]`; data: `<dir>/batches.jsonl`, `<dir>/blobs/`. Request bodies are capped at 1 MiB because bounded/http reserves and touches 2 × `max_body` per connection at startup (16 MiB cost ~800 MB RSS) |
-| Daemon | `omajot daemon --hub <url> [--data <dir>]`, data default `$XDG_DATA_HOME/omajot` (`~/.local/share/omajot`): `replica.json` (id, cursor, next bseq), `ops.jsonl` (every ingested or local ops array, one per line, replayed on start), `outbox.jsonl`, `attachments/` |
+| Config | `$XDG_CONFIG_HOME/omajot/config.json` (`~/.config/omajot/config.json`), all fields optional: `{"hub": "<url>", "data": "<dir, ~/ allowed>"}`. Precedence: command-line flag, then config, then built-in default. The plugin passes `--hub` only when its `hubUrl` setting is non-empty |
+| Import | `tools/import_joplin.py`: Joplin profile → omajot through a daemon (folders, created/updated times, `# Title` first line, tags → `#hashtags`, resources → attachments); rerunnable via `<data>/import-joplin.json` |
+| Daemon | `omajot daemon [--hub <url> \| --no-hub] [--data <dir>]`, data default `$XDG_DATA_HOME/omajot` (`~/.local/share/omajot`): `replica.json` (id, cursor, next bseq), `ops.jsonl` (every ingested or local ops array, one per line, replayed on start), `outbox.jsonl`, `attachments/` |
 | Plugin | repo root: `manifest.json` (id `io.github.renerocksai.omajot`), `Service.qml`, `BarWidget.qml`, `Panel.qml`, `qml/…`. Finds the daemon at `<plugin>/bin/omajot`, else `<plugin>/zig-out/bin/omajot`. Settings: `hubUrl` |
 | PWA | sources in `web/`, built into `web/dist/` (committed, so `zig build` needs no node). Replica in IndexedDB |
 | Default hub URL | `https://your-mac.your-tailnet.ts.net:8443` |

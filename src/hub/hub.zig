@@ -20,9 +20,16 @@ const qrcli = @import("../qrcli.zig");
 pub const max_subscribers = 64;
 pub const connections = 24;
 pub const workers = 4;
-/// Covers a 16 MiB blob upload from a phone on a slow link.
-pub const request_timeout_ms: u32 = 120_000;
-/// SSE streams end cleanly this long before the request deadline, so baz never
+/// Ordinary requests: one batch or one 1 MiB blob chunk, also from a phone on
+/// a slow link.
+pub const request_timeout_ms: u32 = 30_000;
+/// A kept-alive connection may wait this long for its next request; the
+/// request's own deadline starts at its first byte (bounded/http idle_timeout_ms).
+pub const idle_timeout_ms: u32 = 60_000;
+/// The SSE doorbell route's own deadline (baz RouteOptions.timeout_ms), so a
+/// phone or daemon reconnects every ~10 minutes instead of every request timeout.
+pub const sse_timeout_ms: u32 = 10 * 60_000;
+/// SSE streams end cleanly this long before their deadline, so baz never
 /// cuts a chunked body (spikes/hub/REPORT.md).
 pub const sse_margin_ms: u32 = 10_000;
 pub const heartbeat_ms: u32 = 15_000;
@@ -38,7 +45,8 @@ const usage =
     \\  --no-auth  skip the identity check (local development; loopback only)
     \\  --data     batches.jsonl and blobs/ live here (default: ./omajot-data)
     \\  --web      the PWA to serve (default: web/dist of this checkout, if present)
-    \\  --timeout-ms  request deadline (default 120000); SSE streams end cleanly before it
+    \\  --timeout-ms  deadline for ordinary requests (default 30000); the SSE route has
+    \\           its own 10-minute deadline and its streams end cleanly before it
     \\  --url    the URL phones use, printed with a QR code at startup
     \\           (default: found in `tailscale serve status`)
     \\
@@ -495,7 +503,7 @@ pub fn main(init: std.process.Init, args: []const []const u8) !void {
         .blob_dir = blob_dir,
         .assets = assets,
         .login = options.login,
-        .sse_lifetime_ns = @as(u64, options.timeout_ms - @min(sse_margin_ms, options.timeout_ms / 4)) * std.time.ns_per_ms,
+        .sse_lifetime_ns = @as(u64, sse_timeout_ms - sse_margin_ms) * std.time.ns_per_ms,
     };
     defer shared.log.deinit();
     shared.head.store(shared.log.head(), .release);
@@ -514,6 +522,8 @@ pub fn main(init: std.process.Init, args: []const []const u8) !void {
             .connections = connections,
             .shards = 1,
             .timeout_ms = options.timeout_ms,
+            .idle_timeout_ms = idle_timeout_ms,
+            .max_timeout_ms = @max(sse_timeout_ms, options.timeout_ms),
             .max_body = max_body,
             .shutdown_ms = 2000,
             .output_bytes = 128 * 1024,
@@ -530,7 +540,7 @@ pub fn main(init: std.process.Init, args: []const []const u8) !void {
     try app.route("GET", "/api/batches", getBatches);
     try app.route("PUT", "/api/blobs/:name", putBlob);
     try app.route("GET", "/api/blobs/:name", getBlob);
-    try app.routeContinuation("GET", "/api/events", Doorbell, startEvents, resumeEvents, .{});
+    try app.routeContinuation("GET", "/api/events", Doorbell, startEvents, resumeEvents, .{ .timeout_ms = sse_timeout_ms });
 
     try app.start();
     stop_target.store(app, .seq_cst);

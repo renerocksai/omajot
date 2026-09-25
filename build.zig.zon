@@ -5,8 +5,8 @@
     .minimum_zig_version = "0.16.0",
     .dependencies = .{
         .baz = .{
-            .url = "https://github.com/technologylab-ai/baz/archive/2258ff87c66840ecd83ab7d37b8ffacad7267275.tar.gz",
-            .hash = "baz-0.1.0-q-QL000kZwC1LBGt4jZ6nuZceVOP_cKEuR06DieaKqhK",
+            .url = "https://github.com/technologylab-ai/baz/archive/b2aa45ffed10ead3c580ad34bcd89f53b745239a.tar.gz",
+            .hash = "baz-0.1.0-q-QL0yCLZwC0Udj7F0c9alYrYflC_L6HxFmx1qGQIx-F",
         },
     },
     .paths = .{ "build.zig", "build.zig.zon", "src", "docs", "LICENSE", "README.md" },

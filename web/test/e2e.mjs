@@ -115,6 +115,25 @@ try {
   step('phone sees it in the list and in the #groceries tag')
   await wait(phone, () => document.querySelector('.p-list .ntitle')?.textContent.includes('Shopping list'))
   await shot(phone, 'phone-list')
+
+  step('phone: pulling down the list syncs; the app itself does not move')
+  const listBox = await phone.$eval('.notes.scroll', el => { const r = el.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + 40 } })
+  const appTop = () => phone.evaluate(() => document.querySelector('.app').getBoundingClientRect().top)
+  const topBefore = await appTop()
+  const cycles = () => phone.evaluate(() => window.omajot.replica.sync.cycles || 0)
+  await phone.evaluate(() => {
+    const s = window.omajot.replica.sync
+    const kick = s.kick.bind(s)
+    s.cycles = 0
+    s.kick = () => { s.cycles++; return kick() }
+  })
+  await phone.touchscreen.touchStart(listBox.x, listBox.y)
+  for (let dy = 10; dy <= 120; dy += 10) await phone.touchscreen.touchMove(listBox.x, listBox.y + dy)
+  assert.equal(await phone.$eval('.ptr', el => el.textContent), 'Release to sync')
+  await phone.touchscreen.touchEnd()
+  await wait(phone, () => ['Up to date', 'Syncing…'].includes(document.querySelector('.ptr').textContent))
+  assert.ok((await cycles()) >= 1, 'the pull ran a sync')
+  assert.equal(await appTop(), topBefore, 'the app did not move')
   await phone.click('.p-list .back')
   await view(phone, 'folders')
   assert.ok(await phone.$eval('.tags', el => el.textContent.includes('#groceries')))

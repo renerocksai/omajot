@@ -50,7 +50,9 @@
 }
 
 * { box-sizing: border-box; }
-html, body { margin: 0; height: 100%; }
+/* The document never scrolls or bounces: only the lists and the editor do.
+   (An overscrolling document moved the fixed app on iOS.) */
+html, body { margin: 0; height: 100%; overflow: hidden; overscroll-behavior: none; }
 body {
   font: 16px/1.4 var(--font);
   color: var(--fg);
@@ -84,7 +86,12 @@ input { font: inherit; color: inherit; }
 .p-folders { background: var(--bg-side); border-right: 1px solid var(--sep); }
 .p-list { background: var(--bg-side); border-right: 1px solid var(--sep); }
 .p-editor { background: var(--bg); }
-.scroll { overflow-y: auto; -webkit-overflow-scrolling: touch; flex: 1; min-height: 0; }
+.scroll { overflow-y: auto; -webkit-overflow-scrolling: touch; flex: 1; min-height: 0; overscroll-behavior-y: contain; }
+/* Pull to refresh: a pill under the status bar. */
+.ptr { position: fixed; z-index: 60; left: 50%; top: calc(env(safe-area-inset-top) + 8px); transform: translate(-50%, -160%);
+  padding: 6px 14px; border-radius: 999px; background: var(--bg-elev); color: var(--fg); font-size: 14px;
+  box-shadow: var(--shadow); opacity: 0; transition: transform .18s ease, opacity .18s ease; pointer-events: none; }
+.ptr.on { transform: translate(-50%, 0); opacity: 1; }
 
 .bar {
   display: flex; align-items: center; gap: 6px;

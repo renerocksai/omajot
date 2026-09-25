@@ -6,6 +6,7 @@ import { renderMarkdown, toggleTaskEdit, escapeHtml } from './markdown.js'
 import { Attachments } from './attach.js'
 import { icon } from './icons.js'
 import { qrSvg } from './qr.js'
+import { attachPull } from './pull.js'
 import { notesFor, sections, tagCounts, folderTree, folderCounts, syncLine, shortDate } from './model.js'
 
 const $ = (sel, root = document) => root.querySelector(sel)
@@ -531,11 +532,15 @@ function wire() {
   matchMedia('(max-width: 759px)').addEventListener('change', () => setMode(state.mode))
 
   // Keep the editor toolbar above the on-screen keyboard (iOS overlays it).
+  // Follow the visual viewport only while the keyboard shrinks it: iOS also
+  // moves it while rubber-banding an overscroll, and following that made the
+  // whole app move against the finger.
   const vv = window.visualViewport
   if (vv) {
     const fit = () => {
-      document.documentElement.style.setProperty('--vvh', vv.height + 'px')
-      document.documentElement.style.setProperty('--vvtop', vv.offsetTop + 'px')
+      const keyboard = window.innerHeight - vv.height > 80
+      document.documentElement.style.setProperty('--vvh', keyboard ? vv.height + 'px' : '100dvh')
+      document.documentElement.style.setProperty('--vvtop', keyboard ? Math.max(0, vv.offsetTop) + 'px' : '0px')
     }
     vv.addEventListener('resize', fit)
     vv.addEventListener('scroll', fit)
@@ -649,6 +654,29 @@ async function main() {
   render()
   app.classList.remove('loading')
   await replica.start()
+
+  // Pull to refresh (the home-screen app has no reload): sync now, and load a
+  // new omajot version when the service worker finds one.
+  const indicator = document.createElement('div')
+  indicator.className = 'ptr'
+  indicator.setAttribute('role', 'status')
+  document.body.append(indicator)
+  const refresh = async (show) => {
+    show('Syncing…')
+    await replica.sync.kick().catch(() => {})
+    const reg = 'serviceWorker' in navigator ? await navigator.serviceWorker.getRegistration().catch(() => null) : null
+    if (reg) {
+      await reg.update().catch(() => {})
+      if (reg.installing || reg.waiting) {
+        show('Updating omajot…')
+        navigator.serviceWorker.addEventListener('controllerchange', () => location.reload(), { once: true })
+        setTimeout(() => location.reload(), 5000)
+        return
+      }
+    }
+    show(navigator.onLine ? 'Up to date' : 'Offline: synced when back online')
+  }
+  for (const el of app.querySelectorAll('.notes.scroll, .folders.scroll')) attachPull(el, indicator, refresh)
 
   if ('serviceWorker' in navigator && location.protocol !== 'file:') {
     navigator.serviceWorker.register('sw.js').catch((e) => console.warn('service worker:', e))

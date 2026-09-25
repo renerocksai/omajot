@@ -179,10 +179,13 @@ Open `http://127.0.0.1:8787`. The sample notes are in `examples/sample-notes/`.
 ## Coming from Joplin?
 
 Only for Joplin users; skip this if you start fresh. The importer needs
-Python 3.
+Python 3. Run it on the computer that has Joplin, in an omajot folder: with
+the Omarchy plugin, that is the plugin folder that `omarchy plugin add` made
+(below); without it, your omajot clone (run `tools/install-release.sh` there
+first).
 
 ```sh
-cd ~/.config/omarchy/plugins/io.github.renerocksai.omajot
+cd ~/.config/omarchy/plugins/io.github.renerocksai.omajot   # the plugin folder
 tools/import_joplin.py --dry-run
 tools/import_joplin.py --data ~/omajot-import
 ```
@@ -225,7 +228,8 @@ omajot needs Zig 0.16.0 exactly.
 - Do not use `omarchy-install-dev-env zig`. It installs the latest Zig, and a
   newer Zig cannot build omajot.
 
-For the plugin, build in the plugin folder and restart the shell:
+For the plugin, build in the plugin folder that `omarchy plugin add` made, and
+restart the shell:
 
 ```sh
 cd ~/.config/omarchy/plugins/io.github.renerocksai.omajot

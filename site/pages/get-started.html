@@ -214,7 +214,7 @@ WantedBy=default.target</code></pre></li>
   </ul>
   <p>Check the version with <code>zig version</code>. It must show <code>0.16.0</code>.</p>
   <div class="note"><p>Do not use <code>omarchy-install-dev-env zig</code>. It installs the latest Zig, and a newer Zig cannot build omajot.</p></div>
-  <p>For the plugin, build in the plugin folder. The plugin then uses <code>zig-out/bin/omajot</code>:</p>
+  <p>For the plugin, build in the plugin folder that <code>omarchy plugin add</code> made. The plugin then uses <code>zig-out/bin/omajot</code>:</p>
 <pre class="cmd"><code><span class="p">$ </span>cd ~/.config/omarchy/plugins/io.github.renerocksai.omajot
 <span class="p">$ </span>zig build -Doptimize=ReleaseSafe
 <span class="p">$ </span>omarchy restart shell</code></pre>
@@ -224,6 +224,12 @@ WantedBy=default.target</code></pre></li>
 <section id="joplin">
   <h2>Coming from Joplin?</h2>
   <p>This is only for Joplin users. Skip it if you start fresh. The importer needs Python 3. It reads your Joplin database. It does not change it. It copies all notebooks, notes, tags and images into omajot and keeps the dates of your notes.</p>
+  <p>Run the importer on the computer that has Joplin, in an omajot folder:</p>
+  <ul>
+    <li><strong>With the Omarchy plugin:</strong> in the plugin folder. <code>omarchy plugin add</code> made it in step 3: <code>~/.config/omarchy/plugins/io.github.renerocksai.omajot</code>. The plugin has already installed the <code>omajot</code> program there.</li>
+    <li><strong>Without the plugin:</strong> in your omajot clone, for example <code>~/omajot</code> from step 1. Run <code>tools/install-release.sh</code> there first.</li>
+  </ul>
+  <p>With the Omarchy plugin:</p>
 <pre class="cmd"><code><span class="p">$ </span>cd ~/.config/omarchy/plugins/io.github.renerocksai.omajot
 <span class="p">$ </span>tools/import_joplin.py --dry-run
 <span class="p">$ </span>tools/import_joplin.py --data ~/omajot-import</code></pre>

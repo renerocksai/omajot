@@ -5,6 +5,7 @@ import { NoteEditor } from './editor.js'
 import { renderMarkdown, toggleTaskEdit, escapeHtml } from './markdown.js'
 import { Attachments } from './attach.js'
 import { icon } from './icons.js'
+import { qrSvg } from './qr.js'
 import { notesFor, sections, tagCounts, folderTree, folderCounts, syncLine, shortDate } from './model.js'
 
 const $ = (sel, root = document) => root.querySelector(sel)
@@ -36,6 +37,7 @@ function shell() {
     <aside class="pane p-folders" aria-label="Folders">
       <header class="bar">
         <h1>Folders</h1>
+        <button class="icon-btn" data-act="phone" title="Show on phone" aria-label="Show on phone">${icon('phone')}</button>
         <button class="icon-btn" data-act="new-folder" title="New folder">${icon('folderPlus')}</button>
       </header>
       <nav class="folders scroll"></nav>
@@ -363,6 +365,40 @@ function onSearch(q) {
 // ---------------------------------------------------------------- dialogs
 
 // ask({ title, message, input, placeholder, ok, buttons }) → string | null
+// This app's address as a QR code, for opening omajot on a phone. The matrix
+// comes from the core (the same encoder as `omajot qr` and the plugin).
+function showOnPhone() {
+  const url = location.origin + '/'
+  let svg
+  try {
+    svg = qrSvg(replica.request('qr', { text: url }), 'QR code for ' + url)
+  } catch (e) {
+    return toast('No QR code: ' + e.message)
+  }
+  const root = $('.modal-root')
+  root.innerHTML = `
+    <div class="modal-scrim"></div>
+    <div class="modal qr-modal" role="dialog" aria-modal="true" aria-label="Show on phone">
+      <h2>Open omajot on your phone</h2>
+      <div class="qr-box">${svg}</div>
+      <p class="qr-url">${escapeHtml(url)}</p>
+      <p>Scan with your phone's camera, then Share → Add to Home Screen.</p>
+      <div class="modal-buttons"><button data-cancel>Close</button></div>
+    </div>`
+  root.classList.add('open')
+  const close = () => {
+    root.classList.remove('open')
+    root.innerHTML = ''
+    document.removeEventListener('keydown', onKey, true)
+  }
+  const onKey = (e) => { if (e.key === 'Escape') { e.preventDefault(); close() } }
+  document.addEventListener('keydown', onKey, true)
+  root.onclick = (e) => {
+    if (e.target.classList.contains('modal-scrim') || e.target.closest('[data-cancel]')) close()
+  }
+  $('[data-cancel]', root).focus()
+}
+
 function ask(opts) {
   return new Promise((resolve) => {
     const root = $('.modal-root')
@@ -444,6 +480,7 @@ function wire() {
       case 'camera': return $('.file-input').click()
       case 'toggle-sidebar': return toggleSidebar()
       case 'close-sidebar': return closeSidebar()
+      case 'phone': return showOnPhone()
     }
   })
   app.addEventListener('keydown', (e) => {

@@ -298,6 +298,11 @@ input { font: inherit; color: inherit; }
 .modal-buttons.list button[data-cancel] { text-align: center; background: none; color: var(--accent-strong); font-weight: 600; }
 .modal-buttons .danger { color: var(--danger); }
 .modal-buttons .current { outline: 2px solid var(--accent); }
+/* "Show on phone": black on white in every theme, so any camera reads it. */
+.qr-modal { text-align: center; }
+.qr-box { display: flex; justify-content: center; margin: 8px 0 10px; }
+.qr-code { width: min(280px, 70vw); height: auto; background: #fff; border-radius: 8px; image-rendering: pixelated; }
+.modal .qr-url { font-family: var(--mono); font-size: 13px; color: var(--fg); word-break: break-all; user-select: all; -webkit-user-select: all; }
 
 .toasts {
   position: fixed; left: 50%; transform: translateX(-50%);

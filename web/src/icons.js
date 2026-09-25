@@ -20,6 +20,7 @@ const P = {
   search: '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/>',
   sidebar: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/>',
   cloud: '<path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z"/>',
+  phone: '<rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18h2"/>',
 }
 
 export function icon(name, cls = '') {

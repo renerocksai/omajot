@@ -1,0 +1,25 @@
+{
+  "name": "omajot-web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "omajot PWA: core.wasm replica + CodeMirror editor, served by `omajot hub --web web/dist`",
+  "scripts": {
+    "build": "node build.mjs",
+    "watch": "node build.mjs --watch",
+    "test": "node --test test/*.test.mjs",
+    "e2e": "node test/e2e.mjs"
+  },
+  "dependencies": {
+    "@codemirror/commands": "^6.8.0",
+    "@codemirror/lang-markdown": "^6.3.0",
+    "@codemirror/language": "^6.11.0",
+    "@codemirror/state": "^6.5.0",
+    "@codemirror/view": "^6.36.0",
+    "@lezer/highlight": "^1.2.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "puppeteer-core": "^25.12.0"
+  }
+}

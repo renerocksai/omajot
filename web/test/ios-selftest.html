@@ -1,0 +1,98 @@
+<!doctype html>
+<!--
+  In-browser self-test for iOS Safari (the simulator cannot be tapped from a
+  script). Copy next to dist/index.html on a hub, open /ios-selftest.html,
+  screenshot, then delete it again. Drives the real app in a same-origin
+  iframe; creates one note titled "omajot iOS self-test (delete me)" and
+  trashes it at the end.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>omajot iOS self-test</title>
+<style>
+  body { margin: 0; font: 13px/1.35 -apple-system, system-ui, sans-serif; background: #111; color: #eee; }
+  #log { padding: 8px 10px; height: 34vh; overflow: auto; border-bottom: 2px solid #f5b400; }
+  #log div.pass { color: #5d5; } #log div.fail { color: #f66; font-weight: 700; }
+  #verdict { font-size: 17px; font-weight: 800; }
+  iframe { width: 100%; height: 66vh; border: 0; display: block; background: #fff; }
+</style>
+</head>
+<body>
+<div id="log"><div id="verdict">running…</div></div>
+<iframe id="app" src="./"></iframe>
+<script type="module">
+const log = document.getElementById('log')
+const verdict = document.getElementById('verdict')
+const frame = document.getElementById('app')
+const results = []
+const say = (ok, text) => {
+  results.push(ok)
+  const d = document.createElement('div')
+  d.className = ok ? 'pass' : 'fail'
+  d.textContent = (ok ? '✔ ' : '✘ ') + text
+  log.append(d)
+}
+const sleep = (ms) => new Promise(r => setTimeout(r, ms))
+async function until(fn, ms = 15000) {
+  const end = Date.now() + ms
+  for (;;) {
+    try { const v = fn(); if (v) return v } catch {}
+    if (Date.now() > end) throw new Error('timeout')
+    await sleep(100)
+  }
+}
+const W = () => frame.contentWindow
+const O = () => W().omajot
+
+async function main() {
+  const ua = navigator.userAgent.match(/Version\/[\d.]+.*Safari|Chrome\/[\d.]+/)?.[0] || navigator.userAgent
+  say(true, 'browser: ' + ua)
+  await until(() => O()?.replica)
+  say(O().replica.engine.kind === 'wasm', 'core.wasm engine loaded (' + O().replica.engine.version + ')')
+  await until(() => O().state.sync?.state === 'online')
+  say(true, `sync online, head ${O().state.sync.head}`)
+  const who = await (await fetch('api/whoami', { cache: 'no-store' })).json()
+  say(!!who.login, 'identity header reaches the hub: ' + who.login)
+
+  const r = O().replica
+  const before = O().state.sync.head
+  const { note } = r.request('create', { folder: null, text: '' })
+  const row = await until(() => W().document.querySelector(`.nrow[data-id="${note}"]`))
+  row.click()
+  await until(() => W().document.querySelector('.app').dataset.view === 'editor')
+  const view = O().editor.view
+  const text = `omajot iOS self-test (delete me)\nTyped in iOS Safari at ${new Date().toLocaleTimeString()} #omajottest\n- [ ] checkbox`
+  view.dispatch({ changes: { from: 0, insert: text } })
+  await until(() => r.pendingOps.length === 0 && O().state.sync.pending === 0 && O().state.sync.head > before)
+  say(true, `note created and pushed (head ${before} → ${O().state.sync.head})`)
+  say(W().document.querySelectorAll('.cm-content .cm-task').length === 1, 'checkbox widget renders in the editor')
+
+  verdict.textContent = 'holding 12 s for a screenshot of the editor…'
+  await sleep(12000)
+
+  const reg = await W().navigator.serviceWorker.getRegistration()
+  say(!!reg?.active, 'service worker active: ' + (reg?.active?.state || 'none'))
+
+  W().__old = true
+  frame.src = './?reload=' + Date.now()
+  await until(() => !W().__old && O()?.replica && O().state.notes.has(note), 20000)
+  say(O().state.notes.get(note).title === 'omajot iOS self-test (delete me)', 'note survives a reload (IndexedDB replay)')
+  say(!!W().navigator.serviceWorker.controller, 'page is controlled by the service worker after reload')
+
+  const trash = O().replica.call('set', { note, trashed: true })
+  if (!trash.ok) say(false, 'trash failed: ' + trash.error)
+  await until(() => O().replica.pendingOps.length === 0 && O().state.sync.pending === 0)
+  await O().replica.sync.kick()
+  const after = O().replica.request('list').notes.find(n => n.id === note)
+  say(after?.trashed === true, 'test note moved to Trash and synced' + (after?.trashed ? '' : ': ' + JSON.stringify(after)))
+
+  const ok = results.every(Boolean)
+  verdict.textContent = ok ? `ALL ${results.length} PASS` : `FAILED (${results.filter(x => !x).length})`
+  verdict.style.color = ok ? '#5d5' : '#f66'
+}
+main().catch(e => { say(false, 'error: ' + e.message); verdict.textContent = 'FAILED'; verdict.style.color = '#f66' })
+</script>
+</body>
+</html>

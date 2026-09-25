@@ -24,15 +24,13 @@ pub const idle_poll_ms = 60_000;
 pub const max_backoff_ms = 30_000;
 /// Coalesce keystrokes into one batch.
 pub const push_debounce_ms = 200;
-pub const default_hub = "https://your-mac.your-tailnet.ts.net:8443";
 
 const usage =
     \\usage: omajot daemon [--hub <url>|--no-hub] [--data <dir>]
     \\
     \\  Speaks omajot's client protocol as JSON lines on stdin/stdout.
-    \\  --hub   hub base URL (default: "hub" in the config file, else
-++ default_hub ++
-    \\)
+    \\  --hub   hub base URL (default: "hub" in the config file; without one the
+    \\          daemon keeps notes locally and does not sync)
     \\  --data  replica directory (default: "data" in the config file, else
     \\          $XDG_DATA_HOME/omajot or ~/.local/share/omajot)
     \\
@@ -514,7 +512,7 @@ fn attachmentExists(d: *Daemon, name: []const u8) bool {
 }
 
 const Options = struct {
-    /// Null: not given on the command line (config file, then default_hub).
+    /// Null: not given on the command line (then the config file; else no hub).
     hub: ?[]const u8 = null,
     no_hub: bool = false,
     data: ?[]const u8 = null,
@@ -602,7 +600,7 @@ pub fn main(init: std.process.Init, args: []const []const u8) !void {
         std.debug.print("omajot daemon: cannot read {s}: {s}\n", .{ config_path, @errorName(err) });
         std.process.exit(2);
     };
-    const hub_url: ?[]const u8 = if (options.no_hub) null else options.hub orelse config.hub orelse default_hub;
+    const hub_url: ?[]const u8 = if (options.no_hub) null else options.hub orelse config.hub;
 
     const data_rel = if (options.data orelse config.data) |d| try expandHome(gpa, init.environ_map, d) else try defaultDataDir(gpa, init.environ_map);
     defer gpa.free(data_rel);
@@ -630,7 +628,10 @@ pub fn main(init: std.process.Init, args: []const []const u8) !void {
     };
     d.rep = try replica.Replica.open(gpa, io, data_dir, d);
     std.log.info("omajot daemon {s}: replica {s}, data {s}, hub {s}", .{ version, &d.rep.idHex(), data_path, hub_url orelse "(none)" });
-    if (d.hub == null) d.state = .offline;
+    if (d.hub == null) {
+        d.state = .offline;
+        if (!options.no_hub) std.log.info("no hub configured: notes stay on this machine. Set \"hub\" in {s} to sync.", .{config_path});
+    }
     d.syncChanged();
 
     if (d.hub != null) {

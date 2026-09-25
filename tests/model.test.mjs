@@ -21,8 +21,8 @@ test("data directory honours the setting, then XDG, then ~/.local/share", () => 
 })
 
 test("daemon argv carries hub and data dir", () => {
-  assert.deepEqual(M.daemonArgv("/p/omajot", "x", "/d"),
-    ["/p/omajot", "daemon", "--hub", M.DEFAULT_HUB_URL, "--data", "/d"])
+  // An invalid setting means no --hub (the daemon's config decides), never someone else's hub.
+  assert.deepEqual(M.daemonArgv("/p/omajot", "x", "/d"), ["/p/omajot", "daemon", "--data", "/d"])
   // Empty: the daemon reads ~/.config/omajot/config.json instead.
   assert.deepEqual(M.daemonArgv("/p/omajot", "", "/d"), ["/p/omajot", "daemon", "--data", "/d"])
   assert.deepEqual(M.daemonArgv("/p/omajot", "  ", "/d"), ["/p/omajot", "daemon", "--data", "/d"])

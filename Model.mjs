@@ -6,7 +6,8 @@
 // units QString, JS strings and the daemon protocol use (docs/PROTOCOL.md §1).
 
 export const PLUGIN_ID = "io.github.renerocksai.omajot"
-export const DEFAULT_HUB_URL = "https://your-mac.your-tailnet.ts.net:8443"
+// No built-in hub: each user runs their own. "" = let the daemon use its config.
+export const DEFAULT_HUB_URL = ""
 export const DEFAULT_DATA_SUBDIR = "omajot"
 
 export const SOURCE_ALL = "all"
@@ -87,7 +88,8 @@ export function directoryUrl(path) {
 // ~/.config/omajot/config.json, else its built-in default.
 export function daemonArgv(binary, hubUrl, dataDir) {
   const argv = [String(binary), "daemon"]
-  if (String(hubUrl || "").trim() !== "") argv.push("--hub", normalizeHubUrl(hubUrl))
+  const hub = normalizeHubUrl(hubUrl)
+  if (hub !== "") argv.push("--hub", hub)
   argv.push("--data", String(dataDir))
   return argv
 }

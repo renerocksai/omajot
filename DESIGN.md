@@ -23,7 +23,7 @@ if the Joplin app runs and syncs with Dropbox, and nothing can be edited.
 | Topic | Decision | Why |
 |---|---|---|
 | Topology | **One Zig hub in the center**, every device a client that keeps a full replica | Simplest mental model; no third-party storage |
-| Hub host | `your-mac` (headless Mac, on 24/7), run by hand in **tmux / herdr** for now | The only always-on machine in the tailnet; no service setup needed yet |
+| Hub host | an always-on Mac (for the author: a headless M3 Max), run by hand in **tmux / herdr** for now | The only always-on machine in the tailnet; no service setup needed yet |
 | Network | **Tailscale** (`tailscale serve` provides HTTPS on `*.ts.net`) | Private, encrypted, real certs so the PWA works |
 | Dropbox | **Not used.** A Dropbox adapter may come later | "Nothing ever stored in Dropbox" |
 | Conflict handling | **CRDT**, written in Zig | Laptop and phone edit the same note offline |
@@ -63,7 +63,7 @@ When nothing is edited concurrently, the CRDT does nothing but costs nothing.
                          tailnet (WireGuard)
    ┌──────────────────────────────────────────────────────────────┐
    │                                                              │
-   │  your-mac (24/7)                                   │
+   │  your-mac (always on)                                        │
    │  ┌────────────────────────────────────────────┐              │
    │  │ tailscale serve  https://…ts.net → 127.0.0.1:PORT          │
    │  │ omajot hub  (baz, loopback only)           │              │
@@ -160,7 +160,7 @@ Why SSE as a doorbell instead of pushing ops through the stream:
 - SSE events stay tiny, so they fit baz's bounded staging buffers. Bulk data
   goes through ordinary paged GETs.
 
-Verified in `spikes/hub/REPORT.md`, on laptop and on the M3 Max itself (kqueue),
+Verified in `spikes/hub/REPORT.md`, on a Linux laptop and on the M3 Max itself (kqueue),
 including **iOS Safari 26.5** resuming across three deadline reconnects with nothing missed:
 serve does not buffer SSE (~18 ms POST→event), identity headers arrive even from
 the same node and can't be spoofed through serve, and `Last-Event-ID` resume works.

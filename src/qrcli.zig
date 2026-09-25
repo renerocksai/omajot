@@ -37,7 +37,10 @@ pub fn main(init: std.process.Init, args: []const []const u8) !void {
             std.debug.print("omajot qr: cannot read {s}: {s}\n", .{ path, @errorName(err) });
             std.process.exit(2);
         };
-        break :blk config.hub orelse daemon.default_hub;
+        break :blk config.hub orelse {
+            std.debug.print("omajot qr: no hub configured. Pass a URL, or set \"hub\" in {s}\n", .{path});
+            std.process.exit(2);
+        };
     };
     var buffer: [16 * 1024]u8 = undefined;
     var stdout = Io.File.stdout().writer(io, &buffer);

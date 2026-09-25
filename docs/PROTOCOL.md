@@ -48,45 +48,62 @@ Folder = { "id": "f-…", "name": "…", "parent": "f-…" | null }
 
 Tags follow Apple Notes: `#` + letters/digits/`_`/`-`/`/`, preceded by start of line
 or whitespace, not inside inline code or fenced code, not a heading (`# x`, `## x`).
+All-digit tags (`#123`) are not tags; a trailing `-` or `/` is dropped; lowercasing
+covers ASCII and Latin-1. `updated` changes on text edits only (not on pin, move, trash).
 
 ### Requests
 
 | cmd | fields | reply fields |
 |---|---|---|
-| `hello` | `client`: `"qml"` \| `"web"` | `replica`, `version` |
+| `hello` | `client`: `"qml"` \| `"web"` | `replica`, `version`; the daemon adds `data`, `attachments` (absolute path with trailing `/`, the QML preview's `baseUrl`), `hub`, `daemon` |
 | `list` | – | `notes: [NoteSummary]` (incl. trashed), `folders: [Folder]` |
-| `open` | `note` | `text`, `seq` (last applied client edit seq for this note, initially 0) |
+| `open` | `note` | `text`, `seq` (last applied client edit seq for this note, initially 0), `pseq` (last patch seq, initially 0) |
 | `close` | `note` | – |
-| `edit` | `note`, `seq`, `pos`, `del`, `ins` | – |
+| `edit` | `note`, `seq`, `pos`, `del`, `ins`, `ack` (optional: last `pseq` the client applied) | – |
 | `create` | `folder` (nullable), `text` (optional, default `""`) | `note` |
 | `set` | `note` + any of `folder`, `pinned`, `trashed` | – |
 | `folder.create` | `name`, `parent` (nullable) | `folder` |
 | `folder.rename` | `folder`, `name` | – |
 | `folder.move` | `folder`, `parent` (nullable) | – |
 | `folder.delete` | `folder` | – (its notes move to `folder: null`, subfolders to its parent) |
-| `search` | `q` | `ids: ["n-…"]`, case-insensitive substring over title + body, updated desc |
+| `search` | `q` | `ids: ["n-…"]`, case-insensitive substring over title + body, updated desc, trashed included |
 | `paste` | `note`, `pos` | `ins` (markdown to insert). **Daemon only**, the daemon handles it itself (clipboard → attachments) and never forwards it to the engine. The client then sends the text as an ordinary `edit` |
-| `status` | – | `sync`: `"online"`\|`"connecting"`\|`"offline"`, `hub`, `pending` (unsent batches), `head` |
+| `status` | – | `sync`: `"online"`\|`"connecting"`\|`"offline"`, `hub`, `pending` (unsent batches), `head`. **Answered by the shell** (daemon / PWA); the engine only returns offline placeholders |
 
 **Editing.** A client may have several notes open. For each open note it numbers
 its own edits `seq = 1, 2, 3 …` and sends every change as
-`{"cmd":"edit","note":…,"seq":k,"pos":p,"del":d,"ins":"…"}` against its current
-text. An edit with `seq ≤` the last applied one is ignored (idempotent resend).
+`{"cmd":"edit","note":…,"seq":k,"ack":a,"pos":p,"del":d,"ins":"…"}` against its
+current text, where `ack` is the last patch `pseq` it has applied. An edit with
+`seq ≤` the last applied one is ignored (idempotent resend).
+
+Edits and patches can cross on the wire, so both sides transform (two-party OT,
+Jupiter style; reference: `src/core/ot.zig`, whose `xform`/`xformPrim` the QML and
+JS ports mirror exactly):
+
+- The **engine** transforms an incoming edit over the patches it sent with
+  `pseq > ack`. Without `ack` it assumes the client has seen every patch, which is
+  exact for the synchronous wasm path.
+- The **client**, on a patch, drops its pending edits with `seq ≤ base`, transforms
+  the patch over the remaining pending edits, applies it, and remembers its `pseq`
+  as the next `ack`.
+- **Remote (engine-side) changes win ties** on both sides, so concurrent inserts at
+  one position end up in the same order everywhere.
 
 ### Events
 
 | ev | fields | meaning |
 |---|---|---|
-| `patch` | `note`, `base`, `pos`, `del`, `ins` | Remote change to an open note. Positions refer to the text after the client's edits up to `seq = base`. The client transforms the patch over its own edits with `seq > base` (plain position shifting) and applies it with `insert`/`remove`. Never echo a patch back as an edit |
+| `patch` | `note`, `base`, `pseq`, `pos`, `del`, `ins` | Remote change to an open note. `pseq` numbers the patches per open note (1, 2, …). Positions refer to the text after the client's edits up to `seq = base` and all earlier patches. Transform and apply as described under Editing, with `insert`/`remove`. Never echo a patch back as an edit |
 | `notes` | `upsert: [NoteSummary]` | Summaries that changed (local or remote) |
 | `folders` | `folders: [Folder]` | The full folder list, whenever it changes |
-| `sync` | `state`, `pending`, `head` | Sync state changed (emitted by the daemon / PWA shell, not the engine) |
-| `error` | `error` | Something failed outside a request |
+| `sync` | `state` (`online`, `connecting`, `offline`, `conflict`), `pending`, `head` | Sync state changed (emitted by the daemon / PWA shell, not the engine). `conflict`: a 409 on push or a hub head behind the local cursor |
+| `attachment` | `name` | A missing attachment finished downloading (daemon); re-render previews that use it |
+| `error` | `error` | Something failed outside a request. Also emitted on a sync conflict (409 on push, or a hub head behind the local cursor); local edits are always kept |
 
-Transforming a patch over a local edit `L` (both on the same text):
-if `L.pos + L.del ≤ P.pos` then `P.pos += len(L.ins) − L.del`; if `L.pos ≥ P.pos + P.del`
-nothing changes; overlapping ranges: clip `P` to the text still present.
-The core has a reference implementation and tests; the QML and JS ports mirror it.
+An edit or patch is a delete followed by an insert at the same `pos`; transform
+them as primitive pairs. An insert inside a range deleted concurrently survives at
+the range start, and the delete splits around it; overlapping deletes remove
+the overlap once.
 
 ## 2. Hub HTTP API
 
@@ -106,7 +123,8 @@ Stored = Batch + { "seq": N }       // hub sequence, assigned on first accept, s
 | `POST /api/batches` | `Batch` (≤ 1 MiB) | `{"seq":N,"head":H}`. Idempotent: a repeated `(replica,bseq)` returns the original `seq`. Durable (fsync) before replying. `bseq` must be the replica's previous `bseq + 1` or a repeat, else 409 |
 | `GET /api/batches?after=N&limit=M` | `limit` ≤ 1000 | `{"head":H,"batches":[Stored…]}` in `seq` order, response capped at ~1 MiB (the client pages until it reaches `head`) |
 | `GET /api/events` | `Last-Event-ID` | SSE. `event: head`, `id: H`, `data: {"head":H}`: sent at once if `H >` the client's cursor, then whenever head moves; `:` heartbeat every 15 s. The hub ends the stream cleanly before the server deadline; clients just reconnect |
-| `PUT /api/blobs/<sha256hex>.<ext>` | raw bytes (≤ 16 MiB) | `201` (or `200` if present). 400 if the sha256 of the body ≠ the name |
+| `PUT /api/blobs/<sha256hex>.<ext>` | raw bytes (≤ 1 MiB) | `201` (or `200` if present). 400 if the sha256 of the body ≠ the name |
+| `PUT /api/blobs/<name>?offset=N&total=T` | one chunk (≤ 1 MiB) | **Blobs over 1 MiB must be chunked.** `202 {"received":R}` per chunk; `409 {"received":R}` on a wrong offset (resume at R); `201`/`200` when complete and the hash matches |
 | `GET /api/blobs/<sha256hex>.<ext>` | – | bytes, `Cache-Control: public, max-age=31536000, immutable` |
 | `GET /` and static paths | – | The PWA (`web/dist`), no auth needed for the shell itself |
 
@@ -122,7 +140,16 @@ The desktop keeps them in `<data>/attachments/`; the PWA maps that path to
 ## 3. Engine Zig API (`src/core/engine.zig`)
 
 Pure: no `std.Io`, no clock, no randomness, no globals. The shells (daemon,
-wasm) provide time, persistence and networking.
+wasm) provide time, persistence and networking. `ingest` fails with
+`error.InvalidOps` if its input isn't a JSON array; a single malformed op becomes
+an `{"ev":"error"}` line and is skipped. Ops whose dependency hasn't arrived yet
+wait inside the engine until it does.
+
+Op format v1 (opaque to the hub, documented in `src/core/engine.zig`): a JSON array of
+`{"v":1,"k":<kind>,"r":"<hex16>","c":<lamport>,"t":<hlc ms>,…}` with kinds
+`nc` (note create), `ins`, `del`, `ns` (note set), `fc` (folder create), `fs` (folder set).
+Text is an RGA with run-length encoded items; registers are last-writer-wins by `(t, r, c)`.
+A folder move that would close a cycle is dropped (the folder stays a root).
 
 ```zig
 pub const Engine = struct {
@@ -154,6 +181,7 @@ omj_call(handle, ptr, len, now_ms: f64) -> result      // §1 lines
 omj_ingest(handle, ptr, len) -> result                 // §1 event lines
 omj_take_new_ops(handle) -> result                     // JSON array
 omj_free_result(result)
+omj_engine_free(handle)   omj_pending(handle) -> ops waiting for a missing dependency
 result = pointer to [u32 LE length][bytes]; 0 = out of memory
 ```
 
@@ -162,7 +190,7 @@ result = pointer to [u32 LE length][bytes]; 0 = out of memory
 | | |
 |---|---|
 | Binary | one `omajot` executable: `omajot hub …`, `omajot daemon …` |
-| Hub | `omajot hub --port 8787 --data <dir> --login <tailscale login> [--web <dir>]`; data: `<dir>/batches.jsonl`, `<dir>/blobs/` |
+| Hub | `omajot hub --port 8787 --data <dir> --login <tailscale login> [--web <dir>] [--bind 127.0.0.1] [--timeout-ms N] [--no-auth (loopback only)]`; data: `<dir>/batches.jsonl`, `<dir>/blobs/`. Request bodies are capped at 1 MiB because bounded/http reserves and touches 2 × `max_body` per connection at startup (16 MiB cost ~800 MB RSS) |
 | Daemon | `omajot daemon --hub <url> [--data <dir>]`, data default `$XDG_DATA_HOME/omajot` (`~/.local/share/omajot`): `replica.json` (id, cursor, next bseq), `ops.jsonl` (every ingested or local ops array, one per line, replayed on start), `outbox.jsonl`, `attachments/` |
 | Plugin | repo root: `manifest.json` (id `io.github.renerocksai.omajot`), `Service.qml`, `BarWidget.qml`, `Panel.qml`, `qml/…`. Finds the daemon at `<plugin>/bin/omajot`, else `<plugin>/zig-out/bin/omajot`. Settings: `hubUrl` |
 | PWA | sources in `web/`, built into `web/dist/` (committed, so `zig build` needs no node). Replica in IndexedDB |

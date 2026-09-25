@@ -352,6 +352,24 @@ For a hub that must survive reboots without a login:
 - **VPS or home server** on the tailnet: a systemd unit. The better option for
   anyone without an always-on Mac; the hub is one static binary.
 
+## Known follow-ups (first build, 2026-09-25)
+
+- **Engine idle deadline**: bounded/http counts keep-alive idle time toward the next
+  request's deadline, so SSE streams via `tailscale serve` end early; being fixed
+  upstream together with per-route deadlines (bounded-http #7, baz #10).
+- **Upload memory**: bounded/http reserves 2 × `max_body` per connection, so bodies are
+  capped at 1 MiB and blobs are chunked. Streaming request bodies upstream would lift that.
+- **No permanent delete / empty trash** in the protocol yet.
+- **Hub reads `--web` only at startup**: every PWA deploy needs a hub restart (reload on SIGHUP?).
+- **Engine**: split very large inserts so an ops array always fits in a 1 MiB batch;
+  RGA → Fugue to avoid interleaving; counted tree for O(log n) position lookup.
+- **PWA**: preview renders the line after an ATX heading in heading size (a paragraph in
+  CommonMark); `app.js` is 555 KiB (lang-markdown pulls in HTML/CSS/JS modes); remote images
+  in pasted HTML stay links (CORS); Add-to-Home-Screen and the toolbar above the iOS keyboard untested.
+- **Plugin**: keyboard-driven checks still to do by hand: a main-window session, Ctrl+V,
+  preview checkbox clicks, Ctrl+B/I, folder rename/move/delete, images in the preview.
+- **Hub**: snapshots/compaction, start at boot.
+
 ## Open questions
 
 - Folder cycles from concurrent moves: pick the deterministic rule.

@@ -485,13 +485,18 @@ const Daemon = struct {
                 backoff_ms = 1000; // clean end at the stream's planned lifetime
                 self.io.sleep(.fromMilliseconds(100), .awake) catch {};
             } else |err| {
-                // ReadFailed included: a cut stream is just a reconnect.
-                std.log.info("events: {s}; reconnecting in {d} ms", .{ @errorName(err), backoff_ms });
+                // ReadFailed included: a cut stream is just a reconnect. Back off
+                // only while connecting fails; a stream that was up (and then cut,
+                // e.g. by the server deadline) reconnects at once.
                 self.lock.lockUncancelable(self.io);
+                const was_connected = self.events_connected;
                 self.events_connected = false;
                 self.lock.unlock(self.io);
-                self.io.sleep(.fromMilliseconds(backoff_ms), .awake) catch {};
-                backoff_ms = @min(backoff_ms * 2, max_backoff_ms);
+                if (was_connected) backoff_ms = 1000;
+                const delay_ms: i64 = if (was_connected) 250 else backoff_ms;
+                std.log.info("events: {s}; reconnecting in {d} ms", .{ @errorName(err), delay_ms });
+                self.io.sleep(.fromMilliseconds(delay_ms), .awake) catch {};
+                if (!was_connected) backoff_ms = @min(backoff_ms * 2, max_backoff_ms);
             }
         }
     }

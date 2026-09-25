@@ -1,0 +1,208 @@
+{
+ "version": 1,
+ "folders": [
+  {
+   "id": "home",
+   "name": "Home",
+   "parent": null
+  },
+  {
+   "id": "garden",
+   "name": "Garden",
+   "parent": "home"
+  },
+  {
+   "id": "work",
+   "name": "Work",
+   "parent": null
+  },
+  {
+   "id": "projects",
+   "name": "Projects",
+   "parent": "work"
+  },
+  {
+   "id": "meetings",
+   "name": "Meetings",
+   "parent": "work"
+  },
+  {
+   "id": "travel",
+   "name": "Travel",
+   "parent": null
+  },
+  {
+   "id": "recipes",
+   "name": "Recipes",
+   "parent": null
+  },
+  {
+   "id": "ideas",
+   "name": "Ideas",
+   "parent": null
+  }
+ ],
+ "notes": [
+  {
+   "file": "welcome.md",
+   "folder": null,
+   "created_days_ago": 60,
+   "updated_days_ago": 0,
+   "updated_minutes_ago": 4,
+   "pinned": true
+  },
+  {
+   "file": "markdown-tour.md",
+   "folder": null,
+   "created_days_ago": 58,
+   "updated_days_ago": 12
+  },
+  {
+   "file": "home/groceries.md",
+   "folder": "home",
+   "created_days_ago": 21,
+   "updated_days_ago": 0,
+   "updated_minutes_ago": 38,
+   "pinned": true
+  },
+  {
+   "file": "home/weekend.md",
+   "folder": "home",
+   "created_days_ago": 5,
+   "updated_days_ago": 1
+  },
+  {
+   "file": "home/gift-ideas.md",
+   "folder": "home",
+   "created_days_ago": 45,
+   "updated_days_ago": 20
+  },
+  {
+   "file": "home/bike-service.md",
+   "folder": "home",
+   "created_days_ago": 90,
+   "updated_days_ago": 33
+  },
+  {
+   "file": "home/garden/tomato-beds.md",
+   "folder": "garden",
+   "created_days_ago": 120,
+   "updated_days_ago": 9
+  },
+  {
+   "file": "home/garden/watering.md",
+   "folder": "garden",
+   "created_days_ago": 110,
+   "updated_days_ago": 40
+  },
+  {
+   "file": "work/projects/lighthouse-kickoff.md",
+   "folder": "projects",
+   "created_days_ago": 30,
+   "updated_days_ago": 2
+  },
+  {
+   "file": "work/projects/lighthouse-api.md",
+   "folder": "projects",
+   "created_days_ago": 28,
+   "updated_days_ago": 6
+  },
+  {
+   "file": "work/projects/release-checklist.md",
+   "folder": "projects",
+   "created_days_ago": 14,
+   "updated_days_ago": 3
+  },
+  {
+   "file": "work/meetings/weekly-sync.md",
+   "folder": "meetings",
+   "created_days_ago": 10,
+   "updated_days_ago": 10
+  },
+  {
+   "file": "work/meetings/one-on-one-mia.md",
+   "folder": "meetings",
+   "created_days_ago": 17,
+   "updated_days_ago": 17
+  },
+  {
+   "file": "work/meetings/retro-ideas.md",
+   "folder": "meetings",
+   "created_days_ago": 24,
+   "updated_days_ago": 22
+  },
+  {
+   "file": "travel/lisbon.md",
+   "folder": "travel",
+   "created_days_ago": 35,
+   "updated_days_ago": 1
+  },
+  {
+   "file": "travel/packing-list.md",
+   "folder": "travel",
+   "created_days_ago": 34,
+   "updated_days_ago": 4
+  },
+  {
+   "file": "travel/train-times.md",
+   "folder": "travel",
+   "created_days_ago": 70,
+   "updated_days_ago": 60
+  },
+  {
+   "file": "recipes/shakshuka.md",
+   "folder": "recipes",
+   "created_days_ago": 80,
+   "updated_days_ago": 8
+  },
+  {
+   "file": "recipes/sourdough-log.md",
+   "folder": "recipes",
+   "created_days_ago": 100,
+   "updated_days_ago": 50
+  },
+  {
+   "file": "recipes/lemon-pasta.md",
+   "folder": "recipes",
+   "created_days_ago": 40,
+   "updated_days_ago": 39
+  },
+  {
+   "file": "recipes/cold-brew.md",
+   "folder": "recipes",
+   "created_days_ago": 55,
+   "updated_days_ago": 55
+  },
+  {
+   "file": "ideas/book-ideas.md",
+   "folder": "ideas",
+   "created_days_ago": 150,
+   "updated_days_ago": 13
+  },
+  {
+   "file": "ideas/plant-tracker.md",
+   "folder": "ideas",
+   "created_days_ago": 26,
+   "updated_days_ago": 26
+  },
+  {
+   "file": "ideas/quotes.md",
+   "folder": "ideas",
+   "created_days_ago": 200,
+   "updated_days_ago": 90
+  },
+  {
+   "file": "shortcuts.md",
+   "folder": null,
+   "created_days_ago": 12,
+   "updated_days_ago": 7
+  },
+  {
+   "file": "home/old-router.md",
+   "folder": "home",
+   "created_days_ago": 300,
+   "updated_days_ago": 29,
+   "trashed": true
+  }
+ ]
+}

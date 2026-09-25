@@ -31,6 +31,12 @@ RESOURCE_LINK = re.compile(r"\]\(:/([0-9a-f]{32})\)")
 TAG_CHARS = re.compile(r"[^\w\-/]", re.UNICODE)
 
 
+def default_binary():
+    """A local build wins; else the release binary that tools/install-release.sh installs."""
+    built = os.path.join(ROOT, "zig-out", "bin", "omajot")
+    return built if os.access(built, os.X_OK) else os.path.join(ROOT, "bin", "omajot")
+
+
 def tag_word(title):
     """A Joplin tag title as an omajot #hashtag word, or None if nothing is left."""
     word = TAG_CHARS.sub("", title.strip().replace(" ", "-")).strip("-/").lower()
@@ -156,7 +162,7 @@ def main():
     ap.add_argument("--data", default=os.path.join(os.environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share"), "omajot"))
     ap.add_argument("--hub", default=None, help="hub URL (default: the daemon's config/default)")
     ap.add_argument("--no-hub", action="store_true")
-    ap.add_argument("--binary", default=os.path.join(ROOT, "zig-out", "bin", "omajot"))
+    ap.add_argument("--binary", default=default_binary(), help="default: zig-out/bin/omajot (a local build), else bin/omajot (the release)")
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
 

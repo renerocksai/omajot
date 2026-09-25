@@ -183,3 +183,16 @@ details[open] { padding-bottom: 6px }
 summary { cursor: pointer; font-weight: 650; padding: 13px 0; list-style-position: outside }
 summary:hover { color: var(--accent-ink) }
 details .table { margin: 10px 0 16px }
+
+/* Where a section applies (Get started): hub computer, every device, Omarchy only, optional. */
+.badge { display: inline-block; vertical-align: middle; font: 600 12px/1 var(--sans); letter-spacing: .02em; padding: 5px 9px; border-radius: 999px; margin-left: 6px; border: 1px solid var(--line); color: var(--muted); background: var(--paper-2); white-space: nowrap }
+h2 .badge:first-of-type { margin-left: 10px }
+p .badge { margin: 0 2px }
+.badge.hub { color: #1d4ed8; background: #dbeafe; border-color: #bfdbfe }
+.badge.all { color: #047857; background: #d1fae5; border-color: #a7f3d0 }
+.badge.omarchy { color: #7c3aed; background: #ede9fe; border-color: #ddd6fe }
+:root[data-theme="dark"] .badge.hub { color: #93c5fd; background: #172554; border-color: #1e3a8a }
+:root[data-theme="dark"] .badge.all { color: #6ee7b7; background: #052e24; border-color: #065f46 }
+:root[data-theme="dark"] .badge.omarchy { color: #c4b5fd; background: #2e1065; border-color: #4c1d95 }
+.paths { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0 }
+@media (max-width: 720px) { .paths { grid-template-columns: 1fr } }

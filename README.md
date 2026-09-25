@@ -104,6 +104,9 @@ a compiler. The
 [Get started guide](https://renerocksai.github.io/omajot/get-started.html) has
 all details.
 
+Web app only (no Omarchy): do steps 1, 2 and 5. With the Omarchy plugin: do
+steps 1 to 5.
+
 **1. Run the hub** on the computer that is always on (macOS or Linux):
 
 ```sh
@@ -136,7 +139,7 @@ tailscale serve --bg --https=8443 http://127.0.0.1:8787
 Your hub URL is now `https://your-mac.your-tailnet.ts.net:8443`. Do not use
 Tailscale Funnel.
 
-**3. Install the plugin** on your Omarchy computer:
+**3. Omarchy only: install the plugin** on your Omarchy computer:
 
 ```sh
 omarchy plugin add https://github.com/renerocksai/omajot --enable
@@ -146,13 +149,15 @@ When the plugin starts the first time, it runs `tools/install-release.sh`. The
 script downloads the omajot binary for this computer and checks its SHA-256. A
 local build in `zig-out/` has priority, if it exists.
 
-**4. Tell omajot where the hub is.** Create `~/.config/omajot/config.json`:
+**4. For the plugin (and `omajot qr`): tell omajot where the hub is.** Create
+`~/.config/omajot/config.json`:
 
 ```json
 { "hub": "https://your-mac.your-tailnet.ts.net:8443" }
 ```
 
-**5. Open it on your phone.** Install Tailscale on the phone. Scan the QR code
+**5. Open it in your browser and on your phone.** On a computer, open the hub
+URL in the browser. Install Tailscale on the phone. Scan the QR code
 from the hub, from `omajot qr` or from the web app (see above). Then add the web
 app to the home screen.
 

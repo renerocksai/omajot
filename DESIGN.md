@@ -354,6 +354,30 @@ For a hub that must survive reboots without a login:
 - **VPS or home server** on the tailnet: a systemd unit. The better option for
   anyone without an always-on Mac; the hub is one static binary.
 
+## CLI for people and agents, and a TUI (decided 2026-09-26)
+
+- **One replica, many clients.** The daemon also listens on a local socket
+  (`$XDG_RUNTIME_DIR/omajot.sock`, mode 0600) with the same JSON-lines protocol
+  as its stdio. The plugin keeps stdio; the CLI and the TUI connect to the socket,
+  and start a daemon if none runs. Never two writers on one data directory.
+- **Notes like files:** `omajot ls/cat/search/write/edit/append/mv/rm/mkdir/tags`,
+  addressed as `Folder/Title` (or the exact `n-…` id; ambiguous names are an error
+  listing the candidates), human output by default and `--json` for agents.
+  Writes are diffs against the version read, applied as ordinary edits, so they
+  merge with concurrent edits elsewhere. `rm` moves to the Trash.
+- **No MCP server.** Agents use the CLI: thorough `--help` texts plus a
+  `SKILL.md` that describes it.
+- **No "touched by an agent" marker.** Instead `omajot history <note>` and
+  `omajot restore <note> <time>`: the daemon rebuilds a note's text at a past time
+  from its op log (ops carry hybrid logical times); a restore is an ordinary edit,
+  so it syncs and can itself be undone.
+- **Export, not a live mirror:** `omajot export <dir>` writes every note as
+  `Folder/Title.md` plus its attachments, so notes are never locked in.
+- **TUI:** `omajot tui` on libvaxis (Zig 0.16): the plugin's three columns, the
+  Omarchy theme's colours, rendered markdown, images where the terminal supports
+  them. Editing uses `$EDITOR` (nvim): each save is applied as a diff against the
+  opened version, the same code path as `omajot edit`.
+
 ## Known follow-ups (first build, 2026-09-25)
 
 - **Engine idle deadline**: bounded/http counts keep-alive idle time toward the next

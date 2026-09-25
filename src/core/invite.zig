@@ -34,7 +34,11 @@ pub fn isLoopback(url: []const u8) bool {
 }
 
 /// Under a QR code: the phone still needs Tailscale to open the hub URL.
-pub const footer = "Your phone needs Tailscale. It is free for personal use: https://tailscale.com/download";
+/// Terminals print it as two lines (lead, then the URL) so it never wraps
+/// mid-word; the UIs show `footer` and wrap it themselves.
+pub const footer_lead = "Your phone needs Tailscale. It is free for personal use:";
+pub const footer_url = "https://tailscale.com/download";
+pub const footer = footer_lead ++ " " ++ footer_url;
 
 /// The title and numbered steps as plain text lines.
 pub fn writeText(out: *std.Io.Writer) std.Io.Writer.Error!void {

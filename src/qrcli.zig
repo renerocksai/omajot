@@ -26,7 +26,7 @@ pub fn write(out: *Io.Writer, label: []const u8, url: []const u8) !void {
     const code = try core.qr.encode(url);
     try out.print("\n{s}\n  {s}\n\n", .{ label, url });
     try core.qr.renderTerminal(out, &code);
-    try out.print("\n{s}\n", .{core.invite.footer});
+    try out.print("\n{s}\n  {s}\n", .{ core.invite.footer_lead, core.invite.footer_url });
 }
 
 pub fn main(init: std.process.Init, args: []const []const u8) !void {

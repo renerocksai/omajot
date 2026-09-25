@@ -22,4 +22,5 @@ Open omajot on your phone:
                                      
                                      
 
-Your phone needs Tailscale. It is free for personal use: https://tailscale.com/download
+Your phone needs Tailscale. It is free for personal use:
+  https://tailscale.com/download

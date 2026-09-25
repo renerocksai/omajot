@@ -1,9 +1,27 @@
 name: tests
 
+# Docs-only changes (the site, markdown, sample notes) skip the tests; the
+# pages workflow deploys them. Release binaries are only built for v* tags.
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - "site/**"
+      - "**/*.md"
+      - "examples/**"
+      - "tools/build_site.py"
+      - "tools/site_shots.mjs"
+      - ".github/workflows/pages.yml"
+      - "LICENSE"
   pull_request:
+    paths-ignore:
+      - "site/**"
+      - "**/*.md"
+      - "examples/**"
+      - "tools/build_site.py"
+      - "tools/site_shots.mjs"
+      - ".github/workflows/pages.yml"
+      - "LICENSE"
 
 permissions:
   contents: read

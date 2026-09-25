@@ -1,7 +1,9 @@
 #!/bin/sh
 # Add omajot to the Omarchy app launcher (SUPER + SPACE). Optional: the plugin
 # works without it. The entry opens the plugin's main window through the
-# running Omarchy shell; nothing else is installed.
+# running Omarchy shell; nothing else is installed. The launcher lists desktop
+# entries from ~/.local/share/applications and searches their name,
+# GenericName (shown under the name), Comment and Keywords.
 #
 #   tools/install-app.sh            add the launcher entry and the icon
 #   tools/install-app.sh --remove   remove them again
@@ -15,7 +17,8 @@ repo=$(cd "$(dirname "$0")/.." && pwd)
 apps="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
 icons="${XDG_DATA_HOME:-$HOME/.local/share}/icons/hicolor"
 desktop="$apps/omajot.desktop"
-icon="$icons/512x512/apps/omajot.png"
+# Where Omarchy's own installers (omarchy-tui-install) put launcher icons.
+icon="$icons/256x256/apps/omajot.png"
 
 refresh() {
   gtk-update-icon-cache "$icons" >/dev/null 2>&1 || true
@@ -23,7 +26,7 @@ refresh() {
 }
 
 if [ "${1:-}" = "--remove" ]; then
-  rm -f "$desktop" "$icon"
+  rm -f "$desktop" "$icon" "$icons/512x512/apps/omajot.png"
   refresh
   echo "omajot: removed from the app launcher"
   exit 0
@@ -41,7 +44,6 @@ Comment=Markdown notes, synced by your own hub
 Exec=omarchy shell io.github.renerocksai.omajot window
 Icon=omajot
 Terminal=false
-Categories=Office;
 Keywords=notes;markdown;todo;checklist;
 StartupNotify=false
 EOF

@@ -1,0 +1,131 @@
+<!doctype html>
+<!-- The video as one page: render(t) draws the frame at time t (seconds).
+     video/render.mjs sets window.CUT (the cut map, video/tracks/*.json) and
+     window.DATA (frame counts, QR text, measured numbers), then calls render()
+     for every frame and takes a screenshot. 1920×1080. -->
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  :root { --y: #ffd60a; --c: #35e1ff; --m: #ff3fa4; --bg: #06070b; --ink: #f2f4f8; --dim: #97a0ad; }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--bg); color: var(--ink);
+    font-family: "Noto Sans", sans-serif; -webkit-font-smoothing: antialiased; }
+  .scene { position: absolute; inset: 0; display: none; }
+  .scene.on { display: block; }
+  .mono { font-family: "JetBrainsMono Nerd Font", "JetBrains Mono", monospace; }
+
+  /* Neon backdrop: deep night gradient and a perspective grid. */
+  .night { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 35%, #111a2c 0%, #080a12 55%, #04050a 100%); }
+  .grid { position: absolute; left: -40%; right: -40%; bottom: -8%; height: 55%; transform: perspective(700px) rotateX(62deg);
+    background-image: linear-gradient(rgba(255, 63, 164, .35) 2px, transparent 2px), linear-gradient(90deg, rgba(53, 225, 255, .28) 2px, transparent 2px);
+    background-size: 120px 120px; mask-image: linear-gradient(to top, #000 10%, transparent 85%); opacity: .55; }
+  .sun { position: absolute; left: 50%; top: 44%; width: 520px; height: 520px; margin-left: -260px; border-radius: 50%;
+    background: linear-gradient(#ffd60a, #ff3fa4 70%); opacity: .12; filter: blur(2px);
+    mask-image: repeating-linear-gradient(to bottom, #000 0 26px, transparent 26px 34px); }
+  .glow-y { color: var(--y); text-shadow: 0 0 18px rgba(255, 214, 10, .75), 0 0 48px rgba(255, 214, 10, .45), 0 0 90px rgba(255, 63, 164, .35); }
+  .glow-w { text-shadow: 0 0 22px rgba(53, 225, 255, .45), 0 0 60px rgba(53, 225, 255, .25); }
+  .glow-c { color: var(--c); text-shadow: 0 0 16px rgba(53, 225, 255, .8), 0 0 44px rgba(53, 225, 255, .4); }
+
+  /* Captions: a lower third with a yellow bar. */
+  .cap { position: absolute; left: 110px; bottom: 70px; max-width: 1500px; padding: 14px 26px 16px 30px; border-left: 8px solid var(--y);
+    background: rgba(6, 7, 11, .78); border-radius: 6px; font-size: 54px; font-weight: 800; letter-spacing: -.01em; line-height: 1.15; }
+  .cap small { display: block; font-size: 30px; font-weight: 500; color: var(--dim); margin-top: 8px; }
+
+  /* Hook */
+  #hook .logo { position: absolute; left: 50%; top: 170px; width: 190px; height: 190px; margin-left: -95px;
+    filter: drop-shadow(0 0 30px rgba(255, 214, 10, .55)); }
+  #hook .word { position: absolute; top: 380px; width: 100%; text-align: center; font-size: 64px; font-weight: 700; color: var(--dim); letter-spacing: .02em; }
+  #hook .title { position: absolute; top: 500px; width: 100%; text-align: center; font-size: 136px; font-weight: 900; letter-spacing: -.02em; }
+  #hook .sub { position: absolute; top: 680px; width: 100%; text-align: center; font-size: 120px; font-weight: 900; letter-spacing: -.02em; }
+
+  /* App footage in a window */
+  .window { position: absolute; border-radius: 18px; overflow: hidden; background: #0f1318;
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, .08), 0 30px 90px rgba(0, 0, 0, .6), 0 0 80px rgba(53, 225, 255, .12); }
+  .window img { width: 100%; height: 100%; display: block; object-fit: cover; }
+  #web .window { left: 240px; top: 36px; width: 1440px; height: 900px; }
+  #omarchy .window { left: 160px; top: 36px; width: 1600px; height: 900px; background: #0b0d12; }
+  #omarchy .window img { object-fit: contain; }
+  #qr .window { left: 160px; top: 36px; width: 1600px; height: 900px; }
+
+  /* iPhone */
+  .phone { position: absolute; left: 1150px; top: 30px; width: 468px; height: 1016px; border-radius: 72px; padding: 14px;
+    background: linear-gradient(145deg, #3a3d46, #121318 45%, #2a2c33); box-shadow: 0 0 0 2px #50535c, 0 40px 100px rgba(0, 0, 0, .7), 0 0 90px rgba(255, 214, 10, .15); }
+  .phone .screen { width: 100%; height: 100%; border-radius: 58px; overflow: hidden; background: #0f1318; }
+  .phone img { width: 100%; height: 100%; object-fit: cover; object-position: top; display: block; }
+  .side { position: absolute; left: 150px; top: 330px; width: 860px; }
+  .side .big { font-size: 78px; font-weight: 900; line-height: 1.08; letter-spacing: -.02em; }
+  .side .small { font-size: 36px; color: var(--dim); margin-top: 22px; font-weight: 500; }
+
+  /* Private: devices, hub, tunnels */
+  #private svg { position: absolute; left: 0; top: 0; }
+  #private .label { font: 700 30px "Noto Sans"; fill: var(--ink); }
+  #private .note { font: 500 24px "Noto Sans"; fill: var(--dim); }
+
+  /* CLI */
+  .term { position: absolute; left: 180px; top: 60px; width: 1000px; height: 860px; border-radius: 16px; background: #0b0e13;
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, .08), 0 30px 90px rgba(0, 0, 0, .6), 0 0 70px rgba(53, 225, 255, .14); overflow: hidden; }
+  .term .bar { height: 42px; background: #151a22; display: flex; gap: 10px; align-items: center; padding-left: 18px; }
+  .term .bar i { width: 14px; height: 14px; border-radius: 50%; background: #ff5f57; } .term .bar i:nth-child(2) { background: #febc2e } .term .bar i:nth-child(3) { background: #28c840 }
+  .term .body { padding: 22px 28px; font-size: 22px; line-height: 1.25; white-space: pre-wrap; }
+  .term .prompt { color: var(--y); } .term .cmd { color: var(--ink); } .term .out { color: var(--dim); }
+  /* Half-block QR: a JetBrains Mono cell is 0.6em wide, so a 24px line of a
+     20px font gives square 12px modules; no gaps between the lines. */
+  .term .qr { display: block; width: max-content; background: #fff; color: #000; font-size: 20px; line-height: 24px;
+    white-space: pre; margin: 6px 0; }
+  .cursor { display: inline-block; width: 12px; height: 26px; background: var(--y); vertical-align: -5px; }
+  #cli .side { left: 1260px; top: 320px; width: 560px; }
+
+  /* Nerds */
+  .card { position: absolute; left: 0; right: 0; top: 0; bottom: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 0 140px; }
+  .card .h { font-size: 118px; font-weight: 900; letter-spacing: -.025em; line-height: 1.05; }
+  .card .h.long { font-size: 86px; }
+  .card .s { font-size: 40px; color: var(--dim); margin-top: 34px; font-weight: 500; }
+  .card .chips { margin-top: 30px; display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
+  .card .chips span { font-size: 28px; padding: 8px 18px; border-radius: 999px; border: 2px solid rgba(53, 225, 255, .5); color: var(--c); }
+  #nerdcard .h { font-size: 150px; }
+
+  /* Outro */
+  #outro .logo { position: absolute; left: 50%; top: 150px; width: 170px; height: 170px; margin-left: -85px; filter: drop-shadow(0 0 30px rgba(255, 214, 10, .55)); }
+  #outro .word { position: absolute; top: 350px; width: 100%; text-align: center; font-size: 120px; font-weight: 900; letter-spacing: -.02em; }
+  #outro .tag { position: absolute; top: 505px; width: 100%; text-align: center; font-size: 48px; color: var(--dim); font-weight: 600; }
+  #outro .urls { position: absolute; top: 640px; width: 100%; text-align: center; font-size: 50px; line-height: 1.6; }
+  #fade { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; }
+</style>
+</head>
+<body>
+  <section class="scene" id="hook"><div class="night"></div><div class="sun"></div><div class="grid"></div>
+    <img class="logo" src="../web/src/icons/icon.svg"><div class="word">omajot</div>
+    <div class="title glow-w">Notes that sync.</div><div class="sub glow-y">Privately.</div></section>
+
+  <section class="scene" id="web"><div class="night"></div><div class="window"><img></div><div class="cap"></div></section>
+
+  <section class="scene" id="omarchy"><div class="night"></div><div class="window"><img></div><div class="cap"></div></section>
+
+  <section class="scene" id="qr"><div class="night"></div><div class="window"><img src="../site/assets/shots/desktop-qr-dark.webp"></div><div class="cap"></div></section>
+
+  <section class="scene" id="iphone"><div class="night"></div><div class="grid"></div>
+    <div class="side"><div class="big"></div><div class="small"></div></div>
+    <div class="phone"><div class="screen"><img></div></div></section>
+
+  <section class="scene" id="private"><div class="night"></div><div class="grid"></div><svg width="1920" height="1080"></svg><div class="cap"></div></section>
+
+  <section class="scene" id="cli"><div class="night"></div>
+    <div class="term"><div class="bar"><i></i><i></i><i></i></div><div class="body mono"></div></div>
+    <div class="side"><div class="big"></div><div class="small"></div></div></section>
+
+  <section class="scene" id="nerdcard"><div class="night"></div><div class="sun"></div><div class="grid"></div>
+    <div class="card"><div class="h glow-y">And for the nerds:</div></div></section>
+
+  <section class="scene" id="nerd"><div class="night"></div><div class="grid"></div>
+    <div class="card"><div class="h glow-c"></div><div class="s"></div><div class="chips"></div></div></section>
+
+  <section class="scene" id="outro"><div class="night"></div><div class="sun"></div><div class="grid"></div>
+    <img class="logo" src="../web/src/icons/icon.svg"><div class="word glow-y">omajot</div>
+    <div class="tag">Notes that sync. Privately.</div>
+    <div class="urls mono"><div class="glow-c">github.com/renerocksai/omajot</div><div>renerocks.ai/omajot</div></div></section>
+
+  <div id="fade"></div>
+<script src="timeline.js"></script>
+</body>
+</html>

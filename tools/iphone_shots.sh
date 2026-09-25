@@ -20,13 +20,13 @@
 #
 #   tools/iphone_shots.sh
 #
-# Env: MAC (ssh host, default maxross), UDID (simulator, default an iPhone 17
+# Env: MAC (ssh host of the Mac, required), UDID (simulator, default an iPhone 17
 # Pro on iOS 26.5), PORT (demo hub, default 8791; never the real hub's port),
 # OUT (default site/assets/shots). Needs ssh, rsync, scp and ImageMagick here;
 # Xcode, tmux, python3 and Zig 0.16.0 on the Mac.
 set -euo pipefail
 
-MAC=${MAC:-maxross}
+MAC=${MAC:?set MAC to the ssh host name of your Mac, e.g. MAC=my-mac}
 UDID=${UDID:-2EDB2DC5-12EF-4826-B117-F19F26EA31DD}
 PORT=${PORT:-8791}
 repo=$(cd "$(dirname "$0")/.." && pwd)

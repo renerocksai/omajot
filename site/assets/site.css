@@ -1,4 +1,4 @@
-/* omajot site: warm paper and Notes yellow in light, graphite in dark. */
+/* omajot site: warm paper and Notes yellow in light, neutral graphite in dark. */
 :root {
   --paper: #fbf8f1; --paper-2: #f3eee2; --card: #ffffff; --ink: #1f1d1a; --muted: #6a6358;
   --line: #e4ddcd; --accent: #f5c518; --accent-deep: #d69e00; --accent-ink: #8a6400;
@@ -6,18 +6,22 @@
   --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Inter, Roboto, sans-serif;
   --mono: "JetBrains Mono", "SF Mono", ui-monospace, "DejaVu Sans Mono", Menlo, Consolas, monospace;
   --radius: 14px; color-scheme: light;
+  /* How much accent yellow tints highlighted panels; dark mode keeps it faint so panels stay grey. */
+  --tint: 12%;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --paper: #171614; --paper-2: #1f1d1a; --card: #232120; --ink: #f1ede4; --muted: #a79f92;
-    --line: #34312c; --accent: #f5c518; --accent-deep: #c99400; --accent-ink: #f5c518;
-    --code-bg: #1f1d1b; --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 12px 32px rgba(0, 0, 0, .35); color-scheme: dark;
+    --paper: #111113; --paper-2: #1a1a1d; --card: #1f1f23; --ink: #f2f2f5; --muted: #9d9da6;
+    --line: #2e2e34; --accent: #f5c518; --accent-deep: #c99400; --accent-ink: #f5c518;
+    --code-bg: #18181b; --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 12px 32px rgba(0, 0, 0, .35); color-scheme: dark;
+    --tint: 3%;
   }
 }
 :root[data-theme="dark"] {
-  --paper: #171614; --paper-2: #1f1d1a; --card: #232120; --ink: #f1ede4; --muted: #a79f92;
-  --line: #34312c; --accent: #f5c518; --accent-deep: #c99400; --accent-ink: #f5c518;
-  --code-bg: #1f1d1b; --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 12px 32px rgba(0, 0, 0, .35); color-scheme: dark;
+  --paper: #111113; --paper-2: #1a1a1d; --card: #1f1f23; --ink: #f2f2f5; --muted: #9d9da6;
+  --line: #2e2e34; --accent: #f5c518; --accent-deep: #c99400; --accent-ink: #f5c518;
+  --code-bg: #18181b; --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 12px 32px rgba(0, 0, 0, .35); color-scheme: dark;
+  --tint: 3%;
 }
 
 * { box-sizing: border-box }
@@ -102,7 +106,7 @@ pre .p { color: var(--accent-ink); user-select: none }
 .copy:hover { color: var(--ink) }
 
 /* the terminal QR: real text, black on white like `omajot qr` prints it */
-.terminal { background: #1b1a19; color: #e8e4dc; border-radius: 16px; padding: 18px 20px 22px; box-shadow: var(--shadow); max-width: 480px; margin: 0 auto }
+.terminal { background: #18181b; color: #e8e8ec; border-radius: 16px; padding: 18px 20px 22px; box-shadow: var(--shadow); max-width: 480px; margin: 0 auto }
 .terminal .bar { display: flex; gap: 7px; margin-bottom: 12px }
 .terminal .bar i { width: 11px; height: 11px; border-radius: 50%; background: #ff5f57 }
 .terminal .bar i:nth-child(2) { background: #febc2e } .terminal .bar i:nth-child(3) { background: #28c840 }
@@ -117,7 +121,7 @@ th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--li
 th { background: var(--paper-2); font-weight: 650; white-space: nowrap }
 tr:last-child td { border-bottom: 0 }
 td code { white-space: nowrap }
-.note { border-left: 4px solid var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--card)); border-radius: 0 12px 12px 0; padding: 14px 18px; margin: 20px 0 }
+.note { border-left: 4px solid var(--accent); background: color-mix(in srgb, var(--accent) var(--tint), var(--card)); border-radius: 0 12px 12px 0; padding: 14px 18px; margin: 20px 0 }
 .note p:last-child { margin: 0 }
 .toc { display: flex; flex-wrap: wrap; gap: 8px; margin: 22px 0 0 }
 .toc a { font-size: 14px; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); text-decoration: none; color: var(--muted); background: var(--card) }
@@ -148,7 +152,7 @@ kbd { font: 13px var(--mono); padding: 1px 7px; border: 1px solid var(--line); b
 .shots-note { font-size: 13px; text-align: center; margin-top: 18px }
 .band { display: grid; grid-template-columns: 1.4fr 1fr; gap: 10px 36px; align-items: center; margin: 12px 0;
   padding: clamp(22px, 4vw, 40px); border-radius: 22px; border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line));
-  background: color-mix(in srgb, var(--accent) 12%, var(--card)); box-shadow: var(--shadow) }
+  background: color-mix(in srgb, var(--accent) var(--tint), var(--card)); box-shadow: var(--shadow) }
 .band h2 { margin-top: 0 }
 .band .checks { list-style: none; margin: 0; padding: 0 }
 .band .checks li { padding: 7px 0 7px 30px; position: relative; border-bottom: 1px solid color-mix(in srgb, var(--accent) 25%, var(--line)) }

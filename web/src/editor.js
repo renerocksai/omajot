@@ -7,11 +7,14 @@
 //   `addToHistory: false`, so undo only ever reverts our own edits
 //   (CodeMirror maps its history over the remote changes).
 // - Paste/drop: images and files become attachments, HTML becomes markdown.
-import { EditorState, Transaction, Annotation, EditorSelection } from '@codemirror/state'
+import { EditorState, Transaction, Annotation, EditorSelection, Prec } from '@codemirror/state'
 import { EditorView, keymap, placeholder, drawSelection, highlightActiveLine, ViewPlugin, Decoration, MatchDecorator } from '@codemirror/view'
 import { defaultKeymap, history, historyKeymap, indentMore, indentLess } from '@codemirror/commands'
-import { markdown, markdownLanguage } from '@codemirror/lang-markdown'
-import { syntaxHighlighting, HighlightStyle } from '@codemirror/language'
+// markdownLanguage + markdownKeymap instead of markdown(): markdown() also wires in
+// @codemirror/lang-html (and through it the CSS and JS modes) for embedded
+// HTML, which notes don't need and which tripled the bundle.
+import { markdownLanguage, markdownKeymap } from '@codemirror/lang-markdown'
+import { syntaxHighlighting, HighlightStyle, LanguageSupport } from '@codemirror/language'
 import { tags as t } from '@lezer/highlight'
 import { OtClient, sequentialEdits } from './patch.js'
 import { htmlToMarkdown, dataImageRefs } from './html2md.js'
@@ -101,7 +104,8 @@ export class NoteEditor {
         drawSelection(),
         highlightActiveLine(),
         EditorView.lineWrapping,
-        markdown({ base: markdownLanguage, addKeymap: true }),
+        new LanguageSupport(markdownLanguage),
+        Prec.high(keymap.of(markdownKeymap)),
         syntaxHighlighting(highlight),
         hashtags,
         noteWidgets(this.host.resolveAttachment || (n => 'api/blobs/' + n)),

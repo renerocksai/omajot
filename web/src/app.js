@@ -241,7 +241,7 @@ function renderPreview(delay = 0) {
   clearTimeout(previewTimer)
   if (state.mode === 'edit' || !state.current) return
   previewTimer = setTimeout(() => {
-    $('.preview').innerHTML = renderMarkdown(editor.text, { resolveAttachment: attachments.resolve })
+    $('.preview').innerHTML = renderMarkdown(editor.text, { resolveAttachment: attachments.resolve, title: true })
   }, delay)
 }
 

@@ -5,6 +5,11 @@
 // fenced code, links, autolinks, images, nested lists, task lists, quotes,
 // GFM tables, rules and inline #hashtags. Everything else is escaped text.
 //
+// The first line of a note is its title (Apple Notes style): with
+// `{ title: true }` a leading paragraph's first line renders on its own as
+// `<p class="title">`, like the editor's first line, and the rest of that
+// paragraph follows as an ordinary one.
+//
 // Two omajot specifics:
 // - `attachments/<sha256>.<ext>` image and link targets are mapped through
 //   `resolveAttachment(name)` (the PWA serves them from `api/blobs/<name>`).
@@ -38,6 +43,9 @@ function safeUrl(url, resolve) {
 
 // ---------------------------------------------------------------- inline
 
+// `(url "title")`; the url may contain one level of balanced parentheses.
+const TARGET = '\\(\\s*<?((?:[^()\\s>]|\\([^()\\s]*\\))+)>?(?:\\s+"([^"]*)")?\\s*\\)'
+
 const TAG = /(^|[\s(])#([\p{L}\p{N}_\-/]*[\p{L}_][\p{L}\p{N}_\-/]*)/gu
 
 export function renderInline(text, opts = {}) {
@@ -46,17 +54,19 @@ export function renderInline(text, opts = {}) {
   const hold = (html) => '\u0000' + (slots.push(html) - 1) + '\u0000'
 
   let s = text
+  // Backslash hard break (a `\` right before a newline).
+  s = s.replace(/\\\n/g, () => hold('<br>'))
   // Backslash escapes.
   s = s.replace(/\\([\\`*_{}\[\]()#+\-.!~|<>])/g, (_, c) => hold(escapeHtml(c)))
   // Code spans.
   s = s.replace(/(`+)([^`]|[^`][\s\S]*?[^`])\1(?!`)/g, (_, _t, code) =>
     hold('<code>' + escapeHtml(code.replace(/^ (.*) $/, '$1')) + '</code>'))
   // Images.
-  s = s.replace(/!\[([^\]]*)\]\(\s*<?([^)\s>]+)>?(?:\s+"([^"]*)")?\s*\)/g, (_, alt, url, title) =>
+  s = s.replace(new RegExp('!\\[([^\\]]*)\\]' + TARGET, 'g'), (_, alt, url, title) =>
     hold('<img src="' + escapeHtml(safeUrl(url, resolve)) + '" alt="' + escapeHtml(alt) + '"'
       + (title ? ' title="' + escapeHtml(title) + '"' : '') + ' loading="lazy">'))
   // Links (text is rendered recursively).
-  s = s.replace(/\[([^\]]+)\]\(\s*<?([^)\s>]+)>?(?:\s+"([^"]*)")?\s*\)/g, (_, label, url, title) =>
+  s = s.replace(new RegExp('\\[([^\\]]+)\\]' + TARGET, 'g'), (_, label, url, title) =>
     hold('<a href="' + escapeHtml(safeUrl(url, resolve)) + '"'
       + (title ? ' title="' + escapeHtml(title) + '"' : '')
       + ' target="_blank" rel="noopener">' + renderInline(label, opts) + '</a>'))
@@ -85,6 +95,7 @@ const HEADING = /^ {0,3}(#{1,6})(?:[ \t]+(.*?))?(?:[ \t]+#+)?[ \t]*$/
 const RULE = /^ {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$/
 const QUOTE = /^ {0,3}> ?/
 const ITEM = /^( *)([-*+]|\d{1,9}[.)])([ \t]+|$)/
+const SETEXT = /^ {0,3}(=+|-+)[ \t]*$/
 const TABLE_SEP = /^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$/
 
 function indentOf(text) {
@@ -109,7 +120,8 @@ function splitRow(text) {
 }
 
 // lines: [{ text, off }] where off is the UTF-16 source offset of text[0].
-function renderBlocks(lines, opts, tight = false) {
+// `top`: the note's own block level, where the first line is the title.
+function renderBlocks(lines, opts, tight = false, top = false) {
   let html = ''
   let i = 0
   while (i < lines.length) {
@@ -178,12 +190,25 @@ function renderBlocks(lines, opts, tight = false) {
       html += '</tbody></table>'
       continue
     }
-    // Paragraph.
+    // Paragraph, or a setext heading when underlined with === or ---.
     const para = [t.trim()]
     i++
-    while (i < lines.length && !isBlank(lines[i]) && !startsBlock(lines, i)) {
+    let setext = 0
+    while (i < lines.length && !isBlank(lines[i])) {
+      const u = SETEXT.exec(lines[i].text)
+      if (u) { setext = u[1][0] === '=' ? 1 : 2; i++; break }
+      if (startsBlock(lines, i)) break
       para.push(lines[i].text.trim())
       i++
+    }
+    if (setext) {
+      html += '<h' + setext + '>' + renderInline(para.join('\n'), opts) + '</h' + setext + '>'
+      continue
+    }
+    if (top && opts.title && html === '') {
+      // A backslash hard break ending the title line has nothing left to break.
+      html += '<p class="title">' + renderInline(para.shift().replace(/(^|[^\\])\\$/, '$1'), opts) + '</p>'
+      if (!para.length) continue
     }
     const inner = renderInline(para.join('\n'), opts)
     html += tight ? inner : '<p>' + inner + '</p>'
@@ -269,7 +294,7 @@ export function renderMarkdown(src, opts = {}) {
     lines.push({ text: expanded + text.slice(lead.length), off: off - (expanded.length - lead.length) })
     off += text.length + 1
   }
-  return renderBlocks(lines, opts)
+  return renderBlocks(lines, opts, false, true)
 }
 
 // Toggles the task checkbox whose `[` is at `off`. Returns the edit

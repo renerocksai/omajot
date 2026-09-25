@@ -72,3 +72,55 @@ test('fenced code, quotes, rules, tables', () => {
   assert.equal(table, '<table><thead><tr><th style="text-align:left">A</th><th style="text-align:right">B</th></tr></thead>'
     + '<tbody><tr><td style="text-align:left">1</td><td style="text-align:right"><strong>2</strong></td></tr></tbody></table>')
 })
+
+test('title option: only the first line is the title', () => {
+  const opts = { title: true }
+  assert.equal(renderMarkdown('Shopping list\nmilk #groceries', opts),
+    '<p class="title">Shopping list</p><p>milk <span class="tag">#groceries</span></p>')
+  assert.equal(renderMarkdown('Title only', opts), '<p class="title">Title only</p>')
+  assert.equal(renderMarkdown('\n\nAfter blanks\nbody', opts), '<p class="title">After blanks</p><p>body</p>')
+  assert.equal(renderMarkdown('# Heading title\nbody', opts), '<h1>Heading title</h1><p>body</p>')
+  // Only the note's own first block, never a later paragraph or one inside a list.
+  assert.equal(renderMarkdown('- item\n\npara\nmore', opts), '<ul><li>item</li></ul><p>para<br>more</p>')
+  // Without the option nothing changes.
+  assert.equal(renderMarkdown('a\nb'), '<p>a<br>b</p>')
+})
+
+test('an ATX heading is one line; the next line is a paragraph', () => {
+  assert.equal(renderMarkdown('# Shopping list\nmilk #groceries'), '<h1>Shopping list</h1><p>milk <span class="tag">#groceries</span></p>')
+  assert.equal(renderMarkdown('## H\n- item'), '<h2>H</h2><ul><li>item</li></ul>')
+  assert.equal(renderMarkdown('# H #\ntext'), '<h1>H</h1><p>text</p>')
+})
+
+test('setext headings', () => {
+  assert.equal(renderMarkdown('Title\n===\nnext'), '<h1>Title</h1><p>next</p>')
+  assert.equal(renderMarkdown('Sub\n---\n\n---'), '<h2>Sub</h2><hr>')
+  assert.equal(renderMarkdown('two\nlines\n=='), '<h1>two<br>lines</h1>')
+  // --- after a list item is a rule, not a setext underline.
+  assert.equal(renderMarkdown('- a\n---'), '<ul><li>a</li></ul><hr>')
+})
+
+test('blocks end cleanly before following text', () => {
+  assert.equal(renderMarkdown('```\ncode\n```\ntext'), '<pre><code>code</code></pre><p>text</p>')
+  assert.equal(renderMarkdown('> q\n\ntext'), '<blockquote><p>q</p></blockquote><p>text</p>')
+  assert.equal(renderMarkdown('- a\n\ntext'), '<ul><li>a</li></ul><p>text</p>')
+  assert.equal(renderMarkdown('| A |\n| - |\n| 1 |\n\ntext'),
+    '<table><thead><tr><th>A</th></tr></thead><tbody><tr><td>1</td></tr></tbody></table><p>text</p>')
+})
+
+test('hard breaks, escapes and link targets with parentheses', () => {
+  assert.equal(renderMarkdown('a\\\nb'), '<p>a<br>b</p>')
+  assert.equal(renderMarkdown('a  \nb'), '<p>a<br>b</p>')
+  assert.equal(renderInline('\\*not em\\* \\# \\[x\\]'), '*not em* # [x]')
+  assert.match(renderInline('[Zig](https://en.wikipedia.org/wiki/Zig_(language))'),
+    /href="https:\/\/en.wikipedia.org\/wiki\/Zig_\(language\)"[^>]*>Zig<\/a>$/)
+  assert.match(renderInline('![i](pic(1).png "t")'), /<img src="pic\(1\).png" alt="i" title="t"/)
+  assert.equal(renderInline('snake_case_name'), 'snake_case_name')
+  assert.equal(renderInline('`a ``b`` c`'), '<code>a ``b`` c</code>')
+})
+
+test('ordered list start, nested tasks, loose lists', () => {
+  assert.equal(renderMarkdown('3. c\n4. d'), '<ol start="3"><li>c</li><li>d</li></ol>')
+  assert.equal(renderMarkdown('- a\n\n- b'), '<ul><li><p>a</p></li><li><p>b</p></li></ul>')
+  assert.match(renderMarkdown('- [ ] top\n  - [x] sub'), /<li class="task-item">.*top<ul><li class="task-item done">.*sub<\/li><\/ul><\/li>/)
+})

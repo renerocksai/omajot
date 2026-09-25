@@ -69,6 +69,19 @@ pub fn snippet(gpa: Allocator, utf8: []const u8) ![]u8 {
             pending_space = false;
             if (codepoints >= snippet_max_codepoints) break;
         }
+        // Images and links read as their text, not their markdown.
+        if (inlineLink(rest, i)) |link| {
+            const shown = if (link.text.len > 0) link.text else if (link.image) "Image" else "";
+            var j: usize = 0;
+            while (j < shown.len and codepoints < snippet_max_codepoints) {
+                const n = @min(std.unicode.utf8ByteSequenceLength(shown[j]) catch 1, shown.len - j);
+                try out.appendSlice(gpa, shown[j .. j + n]);
+                codepoints += 1;
+                j += n;
+            }
+            i = link.end;
+            continue;
+        }
         const len = std.unicode.utf8ByteSequenceLength(b) catch 1;
         const take = @min(len, rest.len - i);
         try out.appendSlice(gpa, rest[i .. i + take]);
@@ -76,6 +89,20 @@ pub fn snippet(gpa: Allocator, utf8: []const u8) ![]u8 {
         i += take;
     }
     return out.toOwnedSlice(gpa);
+}
+
+const InlineLink = struct { text: []const u8, end: usize, image: bool };
+
+/// `![alt](target)` or `[label](target)` starting at `i`, on one line.
+fn inlineLink(s: []const u8, i: usize) ?InlineLink {
+    const image = s[i] == '!' and i + 1 < s.len and s[i + 1] == '[';
+    const open = if (image) i + 1 else i;
+    if (s[open] != '[') return null;
+    const close = std.mem.findScalarPos(u8, s, open + 1, ']') orelse return null;
+    if (close + 1 >= s.len or s[close + 1] != '(') return null;
+    const paren = std.mem.findScalarPos(u8, s, close + 2, ')') orelse return null;
+    if (std.mem.findScalar(u8, s[open..paren], '\n') != null) return null;
+    return .{ .text = s[open + 1 .. close], .end = paren + 1, .image = image };
 }
 
 fn isTagByte(b: u8) bool {
@@ -237,4 +264,11 @@ test "utf16 length and conversion round trip" {
 test "search folding" {
     try testing.expect(try containsFolded(testing.allocator, "Hello WÖRLD", "wörld"));
     try testing.expect(!try containsFolded(testing.allocator, "Hello", "bye"));
+}
+
+test "snippet shows images and links as their text" {
+    const gpa = std.testing.allocator;
+    const got = try snippet(gpa, "Lisbon\n![Tram 28](attachments/ab.png) and [the map](https://x.example/m) ![](attachments/c.png) [broken](x");
+    defer gpa.free(got);
+    try std.testing.expectEqualStrings("Tram 28 and the map Image [broken](x", got);
 }

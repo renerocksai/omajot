@@ -118,7 +118,8 @@ terminal. Omarchy includes tmux; on a Mac, install it with `brew install tmux`.
 Leave the session with *Ctrl+b*, then *d*. Come back with
 `tmux attach -t omajot-hub`. The
 [Get started guide](https://renerocksai.github.io/omajot/get-started.html#tmux)
-has more.
+has more, and shows how to run the hub as a service that starts at boot
+(systemd on Omarchy and Linux, launchd on macOS).
 
 `tools/install-release.sh` downloads the released binary for this computer. It
 checks the SHA-256 against `release.json` in the repository before it installs

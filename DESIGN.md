@@ -343,7 +343,9 @@ resources → attachments with `:/<resource-id>` links rewritten.
 - No encryption in v1: the hub is our own Mac.
 - The hub runs by hand in tmux / herdr. No launchd service yet.
 
-## Future: start-at-boot hub
+## Start-at-boot hub (documented)
+
+The Get started page now documents a systemd user service (with `loginctl enable-linger`) for Omarchy/Linux and a launchd LaunchAgent for macOS; both were tested (restart after a crash included). Earlier notes:
 
 For a hub that must survive reboots without a login:
 

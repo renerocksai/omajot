@@ -72,7 +72,79 @@
       <tr><td>Go back to the hub, also from another computer over SSH</td><td><code>tmux attach -t omajot-hub</code></td></tr>
       <tr><td>Stop the hub</td><td>Go back to the session, press <kbd>Ctrl</kbd>+<kbd>c</kbd>, then type <code>exit</code></td></tr>
     </table></div>
-    <p>A tmux session ends when the computer restarts. After a restart, start the hub again. A start at boot (launchd or systemd) is not part of omajot yet.</p>
+    <p>A tmux session ends when the computer restarts. To start the hub again by itself, run it as a service (next section).</p>
+  </details>
+
+  <details id="boot">
+    <summary>Later: start the hub at boot, as a service</summary>
+    <p>When the hub runs well in tmux, you can make it a service. Then it starts when the computer starts, and it restarts after a crash. Stop the hub in tmux first: only one hub may use the data folder.</p>
+
+    <h3>Omarchy</h3>
+    <ol>
+      <li><p>Install Tailscale as a service. It then starts at boot, and you can run <code>tailscale serve</code> without sudo:</p>
+<pre class="cmd"><code><span class="p">$ </span>omarchy install service tailscale</code></pre></li>
+      <li><p>Make the file <code>~/.config/systemd/user/omajot-hub.service</code> with this text. Replace <code>you@example.com</code> with your Tailscale login name. <code>%h</code> is your home folder.</p>
+<pre><code>[Unit]
+Description=omajot hub
+After=network-online.target
+
+[Service]
+ExecStart=%h/omajot/bin/omajot hub --port 8787 --data %h/omajot-data --login you@example.com
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target</code></pre></li>
+      <li><p>Start the service now and at each login:</p>
+<pre class="cmd"><code><span class="p">$ </span>systemctl --user daemon-reload
+<span class="p">$ </span>systemctl --user enable --now omajot-hub</code></pre></li>
+      <li><p>Start it at boot also when nobody logs in (this can ask for your password):</p>
+<pre class="cmd"><code><span class="p">$ </span>loginctl enable-linger</code></pre></li>
+      <li><p>Publish the hub one time. Tailscale keeps this setting after a restart:</p>
+<pre class="cmd"><code><span class="p">$ </span>tailscale serve --bg --https=8443 http://127.0.0.1:8787</code></pre></li>
+    </ol>
+    <div class="table"><table>
+      <tr><th>To do this</th><th>Command</th></tr>
+      <tr><td>See if the hub runs</td><td><code>systemctl --user status omajot-hub</code></td></tr>
+      <tr><td>Read its output (also the QR code)</td><td><code>journalctl --user -u omajot-hub -f</code></td></tr>
+      <tr><td>Update the hub</td><td><code>cd ~/omajot &amp;&amp; git pull &amp;&amp; tools/install-release.sh &amp;&amp; systemctl --user restart omajot-hub</code></td></tr>
+      <tr><td>Stop it and do not start it again</td><td><code>systemctl --user disable --now omajot-hub</code></td></tr>
+    </table></div>
+    <p>This works the same on other Linux computers with systemd. Install Tailscale with their package manager, and run <code>sudo systemctl enable --now tailscaled</code> and <code>sudo tailscale set --operator=$USER</code>.</p>
+
+    <h3>macOS</h3>
+    <ol>
+      <li><p>Make the file <code>~/Library/LaunchAgents/io.github.renerocksai.omajot-hub.plist</code>. Use full paths: launchd does not know <code>~</code>. Replace <code>you</code> with your user name.</p>
+<pre><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"&gt;
+&lt;plist version="1.0"&gt;&lt;dict&gt;
+  &lt;key&gt;Label&lt;/key&gt;&lt;string&gt;io.github.renerocksai.omajot-hub&lt;/string&gt;
+  &lt;key&gt;ProgramArguments&lt;/key&gt;&lt;array&gt;
+    &lt;string&gt;/Users/you/omajot/bin/omajot&lt;/string&gt;&lt;string&gt;hub&lt;/string&gt;
+    &lt;string&gt;--port&lt;/string&gt;&lt;string&gt;8787&lt;/string&gt;
+    &lt;string&gt;--data&lt;/string&gt;&lt;string&gt;/Users/you/omajot-data&lt;/string&gt;
+    &lt;string&gt;--login&lt;/string&gt;&lt;string&gt;you@example.com&lt;/string&gt;
+  &lt;/array&gt;
+  &lt;key&gt;RunAtLoad&lt;/key&gt;&lt;true/&gt;
+  &lt;key&gt;KeepAlive&lt;/key&gt;&lt;true/&gt;
+  &lt;key&gt;StandardOutPath&lt;/key&gt;&lt;string&gt;/Users/you/omajot-data/hub.log&lt;/string&gt;
+  &lt;key&gt;StandardErrorPath&lt;/key&gt;&lt;string&gt;/Users/you/omajot-data/hub.log&lt;/string&gt;
+&lt;/dict&gt;&lt;/plist&gt;</code></pre></li>
+      <li><p>Load it. It starts now and at each login:</p>
+<pre class="cmd"><code><span class="p">$ </span>launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/io.github.renerocksai.omajot-hub.plist</code></pre></li>
+    </ol>
+    <p>Read the output with <code>tail -f ~/omajot-data/hub.log</code>. Stop the service with <code>launchctl bootout gui/$(id -u)/io.github.renerocksai.omajot-hub</code>. After a crash, launchd starts the hub again after about 10 seconds.</p>
+    <p>A LaunchAgent starts at login. The Tailscale app for macOS also runs only when a user is logged in. On a Mac without a screen, turn on automatic login: <em>System Settings → Users &amp; Groups → Automatically log in as</em>.</p>
+
+    <h3>Windows (experimental)</h3>
+    <p>Use the Task Scheduler. Make a task with the trigger <em>At startup</em>, the action <em>Start a program</em> with <code>omajot-x86_64-windows.exe</code> and the hub arguments, and the option <em>Run whether user is logged on or not</em>. We did not test the hub on Windows yet.</p>
+
+    <h3>Tips</h3>
+    <ul>
+      <li>Use full paths in service files. A service does not start in your home folder.</li>
+      <li><code>tailscale serve --bg</code> is set one time. <code>tailscale serve status</code> shows it.</li>
+      <li>Back up the data folder (<code>omajot-data</code>). It holds all notes and images.</li>
+    </ul>
   </details>
 </section>
 

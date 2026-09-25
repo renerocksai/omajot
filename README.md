@@ -72,7 +72,7 @@ to Home Screen*. The phone needs Tailscale.
 - **Offline first, conflict free.** Every device keeps all notes. A CRDT, written
   in Zig, merges concurrent edits.
 - **One QR code away.** `omajot qr` prints your hub URL as a QR code in the terminal.
-- **Leave Joplin.** One command imports notebooks, notes, tags and images, with their dates.
+- **Coming from Joplin?** One command imports notebooks, notes, tags and images, with their dates.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="site/assets/shots/plugin-window-dark.webp">
@@ -176,7 +176,10 @@ tools/seed_sample.py --data /tmp/omajot-demo-replica --hub http://127.0.0.1:8787
 
 Open `http://127.0.0.1:8787`. The sample notes are in `examples/sample-notes/`.
 
-## Import from Joplin
+## Coming from Joplin?
+
+Only for Joplin users; skip this if you start fresh. The importer needs
+Python 3.
 
 ```sh
 cd ~/.config/omarchy/plugins/io.github.renerocksai.omajot

@@ -1,10 +1,10 @@
-<!-- {"title": "Get started · omajot", "nav": "Get started", "description": "Run your omajot hub, connect it with Tailscale, install the Omarchy plugin, open omajot on your phone and import your Joplin notes."} -->
+<!-- {"title": "Get started · omajot", "nav": "Get started", "description": "Run your omajot hub, connect it with Tailscale, install the Omarchy plugin, and open omajot on your phone. Coming from Joplin? Import your notes."} -->
 <div class="page-head">
   <p class="eyebrow">Get started</p>
   <h1>Set up omajot</h1>
   <p class="lede">You need a hub on a computer that is always on, and Tailscale on all your devices. On Omarchy, add the plugin to your bar. Without Omarchy, use the web app. The setup takes about 15 minutes. omajot releases have static binaries, so you do not need a compiler.</p>
   <nav class="toc" aria-label="On this page">
-    <a href="#try">Try it locally</a><a href="#need">What you need</a><a href="#web-only">Without Omarchy</a><a href="#hub">1 · Hub</a><a href="#tailscale">2 · Tailscale</a><a href="#plugin">3 · Plugin</a><a href="#config">4 · Config</a><a href="#phone">5 · Phone</a><a href="#source">Build from source</a><a href="#joplin">Import from Joplin</a><a href="#update">Update</a>
+    <a href="#try">Try it locally</a><a href="#need">What you need</a><a href="#web-only">Without Omarchy</a><a href="#hub">1 · Hub</a><a href="#tailscale">2 · Tailscale</a><a href="#plugin">3 · Plugin</a><a href="#config">4 · Config</a><a href="#phone">5 · Phone</a><a href="#source">Build from source</a><a href="#joplin">From Joplin</a><a href="#update">Update</a>
   </nav>
 </div>
 
@@ -23,7 +23,7 @@
   <ul>
     <li>A computer that is always on, for the hub. macOS and Linux work. Windows is experimental. A Mac mini, a home server or a small VPS is a good choice.</li>
     <li>A Tailscale account. <a href="https://tailscale.com">Tailscale</a> is free for personal use.</li>
-    <li><code>curl</code> and Python 3 for <code>tools/install-release.sh</code>. Python 3 also runs the Joplin import.</li>
+    <li><code>curl</code> and Python 3 for <code>tools/install-release.sh</code>.</li>
     <li>For the plugin: an Omarchy desktop. The plugin is optional. The web app is a complete client.</li>
     <li>No compiler. If you want to build omajot yourself, see <a href="#source">Build from source</a>.</li>
   </ul>
@@ -222,8 +222,8 @@ WantedBy=default.target</code></pre></li>
 </section>
 
 <section id="joplin">
-  <h2>Import your Joplin notes</h2>
-  <p>The importer reads your Joplin database. It does not change it. It copies all notebooks, notes, tags and images into omajot and keeps the dates of your notes.</p>
+  <h2>Coming from Joplin?</h2>
+  <p>This is only for Joplin users. Skip it if you start fresh. The importer needs Python 3. It reads your Joplin database. It does not change it. It copies all notebooks, notes, tags and images into omajot and keeps the dates of your notes.</p>
 <pre class="cmd"><code><span class="p">$ </span>cd ~/.config/omarchy/plugins/io.github.renerocksai.omajot
 <span class="p">$ </span>tools/import_joplin.py --dry-run
 <span class="p">$ </span>tools/import_joplin.py --data ~/omajot-import</code></pre>

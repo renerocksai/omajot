@@ -23,6 +23,18 @@
   <figure class="shot">{{shot:plugin-qr:The phone QR code over the main window}}<figcaption>Scan the code with your phone's camera</figcaption></figure>
 </section>
 
+<section id="launcher">
+  <h2>App launcher and keyboard shortcut</h2>
+  <p>You can start the main window like an app. This is optional. The plugin does not need it.</p>
+  <p>Add omajot to the app launcher (<kbd>SUPER</kbd>+<kbd>SPACE</kbd>):</p>
+<pre><code><span class="p">$ </span>~/.config/omarchy/plugins/io.github.renerocksai.omajot/tools/install-app.sh</code></pre>
+  <p>The launcher entry opens the main window. Run the same command with <code>--remove</code> to remove the entry.</p>
+  <p>To open and close the main window with a key, add this line to <code>~/.config/hypr/bindings.lua</code>:</p>
+<pre><code>o.bind("SUPER + SHIFT + N", "omajot", "omarchy-shell shell toggle io.github.renerocksai.omajot")</code></pre>
+  <p>The main window is a normal window, so Hyprland tiles it. To open it as a floating window of a fixed size, add a window rule, for example in <code>~/.config/hypr/looknfeel.lua</code>:</p>
+<pre><code>o.window({ class = "^org.quickshell$", title = "^omajot$" }, { float = true, center = true, size = { 1280, 800 } })</code></pre>
+</section>
+
 <section id="keys">
   <h2>Keys</h2>
   <h3>Plugin, outside the editor</h3>

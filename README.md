@@ -150,6 +150,14 @@ app to the home screen.
 
 If there is no release yet, build from source (below).
 
+**Optional: start omajot like an app.** `tools/install-app.sh` (in the plugin
+folder) adds omajot to the app launcher (*SUPER + SPACE*). For a key that opens
+and closes the main window, add this line to `~/.config/hypr/bindings.lua`:
+
+```lua
+o.bind("SUPER + SHIFT + N", "omajot", "omarchy-shell shell toggle io.github.renerocksai.omajot")
+```
+
 ### Try it on one computer
 
 ```sh

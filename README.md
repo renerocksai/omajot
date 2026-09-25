@@ -10,8 +10,8 @@ phone. Your own small Zig hub syncs all devices over
 **[Documentation and screenshots →](https://renerocksai.github.io/omajot/)**
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="site/assets/shots/desktop-split-dark.webp">
-  <img alt="The omajot web app: folders and tags, the note list, and a note with a picture, a table and a checklist in split view" src="site/assets/shots/desktop-split-light.webp">
+  <source media="(prefers-color-scheme: dark)" srcset="site/assets/shots/desktop-note-dark.webp">
+  <img alt="The omajot web app: folders and tags, the note list, and a note with a picture, a table and a checklist in split view" src="site/assets/shots/desktop-note-light.webp">
 </picture>
 
 ## No Omarchy? No Linux? No problem.

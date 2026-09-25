@@ -99,9 +99,13 @@ const shot = async (page, name) => {
 }
 
 for (const theme of ['light', 'dark']) {
-  // Desktop: three columns, a note with an image, table and checklist, split view.
+  // Desktop: three columns, a note with an image, table and checklist.
+  // The hero and README show the rendered note (preview only); the editor
+  // section of the Using page shows source and preview side by side.
   const d = await open(theme, { width: 1440, height: 900, deviceScaleFactor: 2 })
   await openNote(d.page, 'Lisbon in October')
+  await mode(d.page, 'preview', '.p-editor .actions [data-act="mode"]')
+  await shot(d.page, `desktop-note-${theme}`)
   await mode(d.page, 'split', '.p-editor .actions [data-act="mode"]')
   await shot(d.page, `desktop-split-${theme}`)
 

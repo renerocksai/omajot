@@ -54,7 +54,7 @@ Item {
 
   // --- state ------------------------------------------------------------------
 
-  // "starting" | "ready" | "missing" | "crashed"
+  // "starting" | "installing" | "ready" | "missing" | "crashed"
   property string daemonState: "starting"
   property string lastError: ""
   property string replica: ""
@@ -67,8 +67,9 @@ Item {
   readonly property var sortedNotes: Model.sortNotes(notes)
   readonly property var tagList: Model.tagCounts(notes)
   readonly property var tree: Model.folderTree(folders, notes)
-  readonly property string syncText: daemonState === "missing"
-    ? "No daemon" : (daemonState === "crashed" ? "Daemon stopped" : Model.syncLabel(syncState, syncPending))
+  readonly property string syncText: daemonState === "missing" ? "No daemon"
+    : daemonState === "installing" ? "Installing…"
+    : (daemonState === "crashed" ? "Daemon stopped" : Model.syncLabel(syncState, syncPending))
 
   // id -> doc (Model.newDoc) and id -> number of views holding it.
   property var docs: ({})
@@ -340,16 +341,22 @@ Item {
     locateTimer.restart()
   }
 
-  // Explicit setting, then a release binary, then a local build.
+  // Explicit setting, then a local build (zig-out), then the release binary:
+  // tools/install-release.sh downloads it into bin/omajot when it is missing
+  // or does not match release.json, and prints its path.
   Process {
     id: locate
     running: false
     stdout: StdioCollector { id: locateOut; waitForEnd: true }
+    stderr: StdioCollector { id: locateErr; waitForEnd: true }
     onExited: function(exitCode) {
-      var path = String(locateOut.text || "").trim().split("\n")[0]
+      var lines = String(locateOut.text || "").trim().split("\n")
+      var path = lines[lines.length - 1]
       if (exitCode !== 0 || path === "") {
         root.daemonState = "missing"
-        root.lastError = "omajot binary not found (bin/omajot or zig-out/bin/omajot)"
+        var why = String(locateErr.text || "").trim().split("\n").pop()
+        root.lastError = why !== "" ? why
+          : "omajot binary not found: build it with `zig build -Doptimize=ReleaseSafe` in the plugin directory"
         return
       }
       root.daemonBinary = path
@@ -364,9 +371,10 @@ Item {
       if (locate.running) return
       var candidates = []
       if (root.daemonSetting !== "") candidates.push(root.daemonSetting)
-      candidates.push(root.pluginPath("bin/omajot"), root.pluginPath("zig-out/bin/omajot"))
-      var script = "for f in \"$@\"; do if [ -x \"$f\" ]; then echo \"$f\"; exit 0; fi; done; exit 1"
-      locate.command = ["sh", "-c", script, "omajot-locate"].concat(candidates)
+      candidates.push(root.pluginPath("zig-out/bin/omajot"))
+      var script = "install=$1; shift; for f in \"$@\"; do if [ -x \"$f\" ]; then echo \"$f\"; exit 0; fi; done; exec sh \"$install\""
+      locate.command = ["sh", "-c", script, "omajot-locate", root.pluginPath("tools/install-release.sh")].concat(candidates)
+      root.daemonState = "installing"
       locate.running = true
     }
   }

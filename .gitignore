@@ -4,3 +4,6 @@ zig-pkg/
 *.log
 node_modules/
 __pycache__/
+_site/
+bin/
+release-dist/

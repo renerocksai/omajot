@@ -1,0 +1,75 @@
+name: release
+
+# Push a tag like v0.1.0 to publish static omajot binaries. The job then pins
+# their SHA-256 in release.json on main, which tools/install-release.sh (and so
+# the plugin) checks before it installs a download.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: 0.16.0
+
+      - name: Test
+        run: zig build test
+
+      - name: Build static binaries
+        run: |
+          set -eu
+          mkdir -p release-dist
+          # zig target → release platform name (tools/install-release.sh)
+          for pair in x86_64-linux-musl:x86_64-linux aarch64-linux-musl:aarch64-linux \
+                      aarch64-macos:aarch64-macos x86_64-macos:x86_64-macos \
+                      x86_64-windows-gnu:x86_64-windows; do
+            target=${pair%%:*} platform=${pair##*:}
+            zig build -Dtarget="$target" -Doptimize=ReleaseSafe -Dstrip=true --prefix "out/$platform"
+            ext=""; [ "$platform" = x86_64-windows ] && ext=.exe
+            cp "out/$platform/bin/omajot$ext" "release-dist/omajot-$platform$ext"
+          done
+          (cd release-dist && sha256sum omajot-* > SHA256SUMS)
+          cat release-dist/SHA256SUMS
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" release-dist/* \
+            --title "omajot $GITHUB_REF_NAME" \
+            --notes "Static binaries (Linux: musl, no shared libraries). The Omarchy plugin installs the right one by itself; on a hub computer run tools/install-release.sh. Windows is experimental."
+
+      - name: Pin the checksums in release.json on main
+        run: |
+          set -eu
+          tag=$GITHUB_REF_NAME
+          python3 - "$tag" "$GITHUB_REPOSITORY" <<'EOF'
+          import json, sys
+          tag, repo = sys.argv[1], sys.argv[2]
+          assets = {}
+          for line in open("release-dist/SHA256SUMS"):
+              sha, name = line.split()
+              platform = name.removeprefix("omajot-").removesuffix(".exe")
+              assets[platform] = {"name": name, "sha256": sha}
+          json.dump({"repo": repo, "version": tag.removeprefix("v"), "tag": tag, "assets": assets},
+                    open("/tmp/release.json", "w"), indent=2, sort_keys=True)
+          EOF
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          git checkout -B main origin/main
+          cp /tmp/release.json release.json
+          echo >> release.json
+          git add release.json
+          git commit -m "Pin the $tag release binaries in release.json"
+          git push origin main

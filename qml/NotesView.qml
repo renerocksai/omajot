@@ -835,9 +835,14 @@ FocusScope {
       Text {
         anchors.centerIn: parent
         visible: root.selectedNote === null
-        text: root.service && root.service.daemonState === "missing"
-          ? "The omajot daemon was not found.\nBuild it with `zig build` in the plugin directory."
+        text: !root.service ? ""
+          : root.service.daemonState === "installing" ? "Installing the omajot program…"
+          : root.service.daemonState === "missing"
+            ? "The omajot program is missing.\n" + root.service.lastError
+              + "\nOr build it: zig build -Doptimize=ReleaseSafe in the plugin directory."
           : "Select a note, or press n for a new one"
+        width: Math.min(parent.width - Style.space(24), implicitWidth)
+        wrapMode: Text.Wrap
         horizontalAlignment: Text.AlignHCenter
         color: root.muted
         font.family: root.fontFamily

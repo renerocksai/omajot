@@ -10,6 +10,8 @@ pub fn build(b: *std.Build) void {
         .default_target = if (builtin.os.tag == .linux) .{ .abi = .musl } else .{},
     });
     const optimize = b.standardOptimizeOption(.{});
+    // Release builds strip debug info (-Dstrip): 12 MB → a few MB.
+    const strip = b.option(bool, "strip", "Strip debug info from the omajot binary") orelse false;
     // Zig 0.16's own linker rejects GCC 16's crt1.o (.sframe relocations);
     // only glibc builds need LLVM/LLD. musl uses Zig's own crt.
     const glibc = target.result.os.tag == .linux and target.result.abi.isGnu();
@@ -25,6 +27,7 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
+        .strip = strip,
         .link_libc = false,
         .imports = &.{
             .{ .name = "core", .module = core },

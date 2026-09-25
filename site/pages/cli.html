@@ -1,0 +1,95 @@
+<!-- {"title": "Command line · omajot", "nav": "CLI", "description": "omajot hub, omajot daemon and omajot qr: every flag, the config file and the import tools."} -->
+<div class="page-head">
+  <p class="eyebrow">Command line</p>
+  <h1>One binary, three commands</h1>
+  <p class="lede"><code>omajot</code> is one binary. It runs the hub or the desktop daemon, or it prints a QR code.</p>
+  <nav class="toc" aria-label="On this page">
+    <a href="#hub">omajot hub</a><a href="#daemon">omajot daemon</a><a href="#qr">omajot qr</a><a href="#config">Config file</a><a href="#tools">Tools</a>
+  </nav>
+</div>
+
+<section id="hub">
+  <h2><code>omajot hub</code></h2>
+  <p>Runs the hub: it stores all changes, sends them to your devices, stores attachments and serves the web app.</p>
+<pre><code>omajot hub [--port 8787] [--data &lt;dir&gt;] (--login &lt;tailscale login&gt; | --no-auth)
+           [--web &lt;dir&gt;] [--bind 127.0.0.1] [--url &lt;public url&gt;] [--timeout-ms N]</code></pre>
+  <div class="table"><table>
+    <tr><th>Flag</th><th>Default</th><th>Meaning</th></tr>
+    <tr><td><code>--port</code></td><td><code>8787</code></td><td>The port on the bind address.</td></tr>
+    <tr><td><code>--data</code></td><td><code>./omajot-data</code></td><td>The folder for <code>batches.jsonl</code> (all changes) and <code>blobs/</code> (attachments).</td></tr>
+    <tr><td><code>--login</code></td><td>none</td><td>Only requests with this <code>Tailscale-User-Login</code> header may use <code>/api/*</code>. <code>tailscale serve</code> sets the header.</td></tr>
+    <tr><td><code>--no-auth</code></td><td>off</td><td>No login check, for local tests. The hub refuses to start with it on an address other than loopback.</td></tr>
+    <tr><td><code>--web</code></td><td><code>web/dist</code> of the checkout</td><td>The web app to serve.</td></tr>
+    <tr><td><code>--bind</code></td><td><code>127.0.0.1</code></td><td>The IPv4 address to listen on. Keep loopback when you use <code>tailscale serve</code>.</td></tr>
+    <tr><td><code>--url</code></td><td>from <code>tailscale serve status</code></td><td>The URL for phones. The hub prints it with a QR code when it starts.</td></tr>
+    <tr><td><code>--timeout-ms</code></td><td><code>{{num:src/hub/hub.zig:request_timeout_ms}}</code></td><td>The deadline for normal requests, in milliseconds. The event stream has its own deadline of {{ms:src/hub/hub.zig:sse_timeout_ms}} and ends cleanly {{ms:src/hub/hub.zig:sse_margin_ms}} before it.</td></tr>
+  </table></div>
+  <p>Give exactly one of <code>--login</code> and <code>--no-auth</code>. Stop the hub with <kbd>Ctrl</kbd>+<kbd>C</kbd>: it finishes the open requests first.</p>
+</section>
+
+<section id="daemon">
+  <h2><code>omajot daemon</code></h2>
+  <p>The plugin runs the daemon for you. The daemon keeps the local copy of your notes, syncs it with the hub, and handles paste. It speaks JSON lines on stdin and stdout, so you can also use it from scripts.</p>
+<pre><code>omajot daemon [--hub &lt;url&gt; | --no-hub] [--data &lt;dir&gt;]</code></pre>
+  <div class="table"><table>
+    <tr><th>Flag</th><th>Default</th><th>Meaning</th></tr>
+    <tr><td><code>--hub</code></td><td><code>hub</code> in the config file</td><td>The hub URL. Without a hub, the daemon keeps your notes on this computer only.</td></tr>
+    <tr><td><code>--no-hub</code></td><td>off</td><td>Do not sync, also when the config file names a hub.</td></tr>
+    <tr><td><code>--data</code></td><td><code>data</code> in the config file, else <code>~/.local/share/omajot</code></td><td>The local copy: the log of all changes, the queue of unsent changes, and <code>attachments/</code>.</td></tr>
+  </table></div>
+  <p>An example session:</p>
+<pre><code><span class="p">$ </span>omajot daemon --no-hub --data /tmp/notes
+<span class="c">{"ev":"sync","state":"offline","pending":0,"head":0}</span>
+{"id":1,"cmd":"create","folder":null,"text":"# Hello\nfrom a script #demo"}
+<span class="c">{"re":1,"ok":true,"note":"n-c48c3ae4cbe96ad4-1"}</span>
+<span class="c">{"ev":"notes","upsert":[{"id":"n-c48c3ae4cbe96ad4-1","title":"Hello","snippet":"from a script #demo","tags":["demo"],…}]}</span>
+{"id":2,"cmd":"search","q":"script"}
+<span class="c">{"re":2,"ok":true,"ids":["n-c48c3ae4cbe96ad4-1"]}</span></code></pre>
+  <p>Each request gets one reply (<code>"re"</code>). Events (<code>"ev"</code>) can come at any time.</p>
+  <p><a href="https://github.com/renerocksai/omajot/blob/main/docs/PROTOCOL.md">docs/PROTOCOL.md</a> lists all commands and events. The plugin and the web app use the same commands.</p>
+  <div class="note"><p>Run only one daemon for one data folder. Two daemons on the same folder can overwrite each other's files.</p></div>
+</section>
+
+<section id="qr">
+  <h2><code>omajot qr</code></h2>
+  <p>Prints a URL and its QR code in the terminal. Without a URL, it uses <code>hub</code> from the config file. Without a configured hub, it shows how to set one up.</p>
+<pre><code>omajot qr [url]</code></pre>
+  <div class="terminal" aria-label="Terminal output of omajot qr">
+    <div class="bar"><i></i><i></i><i></i></div>
+<pre><span class="p">$</span> omajot qr https://your-mac.your-tailnet.ts.net:8443
+{{qr_terminal}}</pre>
+  </div>
+  <p style="margin-top:16px">The QR code is black on white, also in a dark terminal. Phones scan it best at a normal font size.</p>
+</section>
+
+<section id="config">
+  <h2>The config file</h2>
+  <p><code>~/.config/omajot/config.json</code> (or <code>$XDG_CONFIG_HOME/omajot/config.json</code>). All fields are optional.</p>
+<pre><code>{
+  "hub": "https://your-mac.your-tailnet.ts.net:8443",
+  "data": "~/.local/share/omajot"
+}</code></pre>
+  <p>omajot uses the first value it finds:</p>
+  <ol>
+    <li>the command-line flag (<code>--hub</code>, <code>--data</code>),</li>
+    <li>the plugin setting (<code>hubUrl</code>, <code>dataDir</code>), when it is not empty,</li>
+    <li>the config file,</li>
+    <li>the default: no hub, and <code>~/.local/share/omajot</code> for the data.</li>
+  </ol>
+</section>
+
+<section id="tools">
+  <h2>Tools</h2>
+  <h3><code>tools/import_joplin.py</code></h3>
+  <p>Imports a Joplin desktop profile. See <a href="get-started.html#joplin">Import your Joplin notes</a>.</p>
+  <div class="table"><table>
+    <tr><th>Flag</th><th>Default</th><th>Meaning</th></tr>
+    <tr><td><code>--profile</code></td><td><code>~/.config/joplin-desktop</code></td><td>The Joplin profile to read.</td></tr>
+    <tr><td><code>--data</code></td><td><code>~/.local/share/omajot</code></td><td>The omajot copy to import into. Use a separate folder while the plugin runs.</td></tr>
+    <tr><td><code>--hub</code> / <code>--no-hub</code></td><td>the config file</td><td>Where the imported notes go.</td></tr>
+    <tr><td><code>--dry-run</code></td><td>off</td><td>Show what the import would do. Change nothing.</td></tr>
+  </table></div>
+  <h3><code>tools/seed_sample.py</code></h3>
+  <p>Puts the sample notes from <code>examples/sample-notes/</code> into a new copy: 26 notes in 8 folders, with tags, checklists, tables and images. The screenshots on this site use them.</p>
+<pre class="cmd"><code><span class="p">$ </span>tools/seed_sample.py --data /tmp/omajot-demo-replica --hub http://127.0.0.1:8787</code></pre>
+</section>

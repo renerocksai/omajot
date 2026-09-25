@@ -1,0 +1,105 @@
+<!-- {"title": "omajot: markdown notes for Omarchy and your phone", "nav": "Home", "description": "Apple-Notes-style markdown notes for Omarchy: a bar dropdown, a main window and a phone web app, synced by your own Zig hub over Tailscale."} -->
+<section class="hero">
+  <p class="eyebrow">Notes for Omarchy · and your phone</p>
+  <h1>Your notes. <em>Your hub.</em> Everywhere.</h1>
+  <p class="lede">omajot is a markdown notes app in the spirit of Apple Notes. Open it from the Omarchy bar, in a main window, or as a web app on your phone. Your own small Zig hub syncs all devices over Tailscale. No cloud account. No Dropbox. No conflicts.</p>
+  <div class="cta">
+    <a class="btn primary" href="get-started.html">Get started</a>
+    <a class="btn" href="using.html">See the features</a>
+    <a class="btn" href="under-the-hood.html">Under the hood</a>
+  </div>
+  <div class="pills"><span>Zig 0.16</span><span>CRDT sync</span><span>offline first</span><span>Quickshell plugin</span><span>installable web app</span><span>everything bounded</span></div>
+  <div class="hero-shot">{{shot:desktop-split:The omajot web app with folders, the note list and a note in split view with a picture, a table and a checklist}}</div>
+</section>
+
+<section class="band">
+  <div>
+    <p class="eyebrow">Any computer · any phone</p>
+    <h2>No Omarchy? No Linux? No problem.</h2>
+    <p>The web app is a complete omajot client. Run the hub on a Mac, a Linux computer or Windows (experimental). Open the hub URL in a desktop browser or on your phone, and install it as an app. Your notes work offline and sync when the hub is reachable.</p>
+    <p>The Omarchy plugin is an extra for Omarchy users. It is not a requirement.</p>
+  </div>
+  <ul class="checks">
+    <li>iPhone and iPad: <em>Share</em> → <em>Add to Home Screen</em></li>
+    <li>Android: <em>Install app</em></li>
+    <li>Chrome or Edge on the desktop: <em>Install app</em></li>
+    <li>Tested in Chrome, Chromium and Safari on iOS 26</li>
+  </ul>
+  <p class="band-cta"><a class="btn primary" href="get-started.html#web-only">Use omajot without Omarchy</a></p>
+</section>
+
+<section>
+  <h2>Everything a notes app needs. Nothing it does not.</h2>
+  <p class="lede">Write in markdown. See the result next to it. Find any note in a second.</p>
+  <div class="grid">
+    <div class="card"><h3><span class="ico">📝</span>Markdown first</h3><p>Write plain markdown. The preview shows headings, tables, code, quotes, links and images. The first line of a note is its title.</p></div>
+    <div class="card"><h3><span class="ico">☑️</span>Checklists</h3><p>Write <code>- [ ]</code> for a task. Click the box in the preview to tick it. Press Enter to continue the list.</p></div>
+    <div class="card"><h3><span class="ico">#</span>Inline tags</h3><p>Write <code>#garden</code> anywhere in a note. omajot lists all tags next to your folders.</p></div>
+    <div class="card"><h3><span class="ico">📁</span>Folders</h3><p>Put notes in nested folders. Pin the notes you need often. Deleted notes go to the Trash first.</p></div>
+    <div class="card"><h3><span class="ico">🖼️</span>Paste anything</h3><p>Paste an image, a file, a web page or a LibreOffice text. omajot stores images as attachments and converts HTML to markdown.</p></div>
+    <div class="card"><h3><span class="ico">🔎</span>Instant search</h3><p>Search titles and full text. Every device has a full copy of your notes, so search needs no network.</p></div>
+    <div class="card"><h3><span class="ico">✈️</span>Offline first</h3><p>Write on the plane or in the train. omajot syncs when the network comes back. Two edits of the same note merge automatically.</p></div>
+    <div class="card"><h3><span class="ico">📱</span>On every device</h3><p>The hub serves a web app for phones, tablets and desktop browsers. Scan a QR code, add it to the home screen, and it works like a native app, also offline.</p></div>
+    <div class="card"><h3><span class="ico">📥</span>Leave Joplin</h3><p>Import all notebooks, notes, tags and images from Joplin with one command. The dates of your notes stay the same.</p></div>
+  </div>
+</section>
+
+<section>
+  <div class="split">
+    <div>
+      <p class="eyebrow">In your bar</p>
+      <h2>Made for Omarchy</h2>
+      <p>omajot is an Omarchy shell plugin. Click the note icon in the bar to open the dropdown. Middle-click it to open the main window. Both show the same three columns: folders and tags, notes, and the editor.</p>
+      <p>Use the keyboard for everything: <kbd>n</kbd> new note, <kbd>/</kbd> search, <kbd>j</kbd> <kbd>k</kbd> move, <kbd>e</kbd> editor or preview, <kbd>p</kbd> pin.</p>
+      <p><a href="using.html">Learn to use omajot →</a></p>
+    </div>
+    <div class="shot">{{shot:plugin-dropdown:The omajot dropdown under the note icon in the Omarchy bar, with the Groceries checklist in split view}}</div>
+  </div>
+</section>
+
+<section>
+  <p class="eyebrow">In your pocket</p>
+  <h2>The same notes on your phone</h2>
+  <p class="lede">The hub serves a web app for iPhone, iPad and Android. It keeps a full copy of your notes in the browser. It starts offline and syncs in the background.</p>
+  <div class="iphones">
+    <figure><div class="iphone">{{shot:iphone-list:The note list on an iPhone}}</div><figcaption>All notes, pinned first</figcaption></figure>
+    <figure><div class="iphone">{{shot:iphone-note:A note with a picture and a table on an iPhone}}</div><figcaption>Pictures and tables</figcaption></figure>
+    <figure><div class="iphone">{{shot:iphone-checklist:A checklist on an iPhone}}</div><figcaption>Tap to tick</figcaption></figure>
+    <figure><div class="iphone">{{shot:iphone-folders:Folders and tags on an iPhone}}</div><figcaption>Folders and #tags</figcaption></figure>
+  </div>
+  <p class="muted shots-note">Real screenshots from Safari on iOS 26 (iPhone 17 Pro simulator), with the sample notes.</p>
+</section>
+
+<section>
+  <div class="split">
+    <div>
+      <p class="eyebrow">One command</p>
+      <h2>Scan and go</h2>
+      <p>You do not type the hub URL on your phone. Three places show it as a QR code:</p>
+      <ul>
+        <li><code>omajot hub</code> prints it when it starts.</li>
+        <li><code>omajot qr</code> prints it on any computer that knows your hub.</li>
+        <li>The phone button in the web app and in the plugin shows it.</li>
+      </ul>
+      <p>Point the phone camera at the code, open the link, and add omajot to the home screen. All of them use one QR encoder, written in Zig.</p>
+      <p><a href="get-started.html#phone">Set up your phone →</a></p>
+    </div>
+    <div class="terminal" aria-label="Terminal output of omajot qr">
+      <div class="bar"><i></i><i></i><i></i></div>
+<pre><span class="p">$</span> omajot qr https://your-mac.your-tailnet.ts.net:8443
+{{qr_terminal}}</pre>
+    </div>
+  </div>
+</section>
+
+<section>
+  <p class="eyebrow">How it works</p>
+  <h2>A small hub in the middle. A full copy on every device.</h2>
+  <p class="lede">Run <code>omajot hub</code> on a computer that is always on, for example a Mac mini or a small server. Tailscale connects your devices to it with real HTTPS. Every device keeps all notes and syncs changes as small operations.</p>
+  <div class="grid">
+    <div class="card"><h3><span class="ico">🧮</span>A Zig CRDT</h3><p>Concurrent edits merge without conflict copies. Property tests check that replicas always converge.</p></div>
+    <div class="card"><h3><span class="ico">📏</span>Everything bounded</h3><p>The hub runs on <a href="https://technologylab-ai.github.io/baz/">baz</a> and <a href="https://technologylab-ai.github.io/bounded-http/">bounded/http</a>. Memory, connections and request sizes have fixed limits.</p></div>
+    <div class="card"><h3><span class="ico">🧩</span>One core, native and WASM</h3><p>The same Zig core runs in the desktop daemon and, compiled to a {{wasm_kib}} KiB <code>core.wasm</code>, in the browser.</p></div>
+  </div>
+  <p style="margin-top:22px"><a href="under-the-hood.html">Read how it works →</a></p>
+</section>

@@ -1,0 +1,136 @@
+<!-- {"title": "Using omajot", "nav": "Using omajot", "description": "The omajot dropdown, main window and web app: keys, markdown editor and preview, checklists, tags, folders, paste, attachments, trash and offline use."} -->
+<div class="page-head">
+  <p class="eyebrow">Using omajot</p>
+  <h1>Write, find, sync</h1>
+  <p class="lede">This page shows the plugin in the Omarchy bar and the web app on your phone. Both show the same notes and work the same way.</p>
+  <nav class="toc" aria-label="On this page">
+    <a href="#views">Dropdown and main window</a><a href="#keys">Keys</a><a href="#editor">Editor and preview</a><a href="#notes">Titles, checklists, tags</a><a href="#folders">Folders, pins, trash</a><a href="#paste">Paste and attachments</a><a href="#sync">Sync and offline</a><a href="#webapp">Web app</a><a href="#settings">Plugin settings</a>
+  </nav>
+</div>
+
+<section id="views">
+  <h2>Dropdown and main window</h2>
+  <p>Click the note icon in the bar to open the dropdown. Middle-click it to open the main window. The main window is a normal window, so you can tile it next to your work.</p>
+  <p>Both show three columns:</p>
+  <ul>
+    <li><strong>Sources:</strong> all notes, pinned notes, notes without a folder, your folders, your tags and the Trash.</li>
+    <li><strong>Notes:</strong> the notes of the selected source, newest first. Type in the search field to filter them.</li>
+    <li><strong>Editor:</strong> the selected note, as markdown source, as preview, or both side by side.</li>
+  </ul>
+  <figure class="shot">{{shot:plugin-dropdown:The dropdown under the note icon in the Omarchy bar}}<figcaption>The dropdown, under the note icon in the bar</figcaption></figure>
+  <figure class="shot">{{shot:plugin-window:The main window with folders, tags, the note list and a note with a picture, a table and a checklist}}<figcaption>The main window, split layout</figcaption></figure>
+  <p>The phone button next to the omajot name shows your hub URL as a QR code. In the dropdown, press <kbd>o</kbd> to open the selected note in the main window.</p>
+  <figure class="shot">{{shot:plugin-qr:The phone QR code over the main window}}<figcaption>Scan the code with your phone's camera</figcaption></figure>
+</section>
+
+<section id="keys">
+  <h2>Keys</h2>
+  <h3>Plugin, outside the editor</h3>
+  <div class="table"><table>
+    <tr><th>Key</th><th>Action</th></tr>
+    <tr><td><kbd>j</kbd> <kbd>k</kbd> or <kbd>↓</kbd> <kbd>↑</kbd></td><td>Move in the active column</td></tr>
+    <tr><td><kbd>h</kbd> <kbd>l</kbd> or <kbd>←</kbd> <kbd>→</kbd></td><td>Go to the sources column or the notes column</td></tr>
+    <tr><td><kbd>Enter</kbd> or <kbd>l</kbd> in the notes column</td><td>Edit the selected note</td></tr>
+    <tr><td><kbd>n</kbd> or <kbd>Ctrl</kbd>+<kbd>N</kbd></td><td>New note in the selected folder</td></tr>
+    <tr><td><kbd>/</kbd> or <kbd>Ctrl</kbd>+<kbd>F</kbd></td><td>Search titles and text</td></tr>
+    <tr><td><kbd>e</kbd> or <kbd>Ctrl</kbd>+<kbd>E</kbd></td><td>Change the layout: split, source, preview</td></tr>
+    <tr><td><kbd>p</kbd> or <kbd>Ctrl</kbd>+<kbd>P</kbd></td><td>Pin or unpin the note</td></tr>
+    <tr><td><kbd>m</kbd></td><td>Move the note to a folder</td></tr>
+    <tr><td><kbd>x</kbd> or <kbd>Delete</kbd></td><td>Move the note to the Trash, or restore it</td></tr>
+    <tr><td><kbd>o</kbd></td><td>Open the note in the main window (dropdown only)</td></tr>
+    <tr><td><kbd>Esc</kbd> or <kbd>q</kbd></td><td>Close</td></tr>
+  </table></div>
+  <h3>Plugin, in the editor</h3>
+  <div class="table"><table>
+    <tr><th>Key</th><th>Action</th></tr>
+    <tr><td><kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Y</kbd></td><td>Undo / redo your own changes. Changes from other devices stay.</td></tr>
+    <tr><td><kbd>Ctrl</kbd>+<kbd>B</kbd> / <kbd>Ctrl</kbd>+<kbd>I</kbd></td><td>Bold / italic</td></tr>
+    <tr><td><kbd>Enter</kbd> in a list</td><td>Continue the list or checklist. Enter on an empty item ends the list.</td></tr>
+    <tr><td><kbd>Tab</kbd> after <code>#ta</code></td><td>Complete a tag that you already use</td></tr>
+    <tr><td><kbd>Ctrl</kbd>+<kbd>V</kbd></td><td>Paste text, images, files or HTML</td></tr>
+    <tr><td><kbd>Esc</kbd></td><td>Leave the editor</td></tr>
+  </table></div>
+  <h3>Web app</h3>
+  <div class="table"><table>
+    <tr><th>Key</th><th>Action</th></tr>
+    <tr><td><kbd>/</kbd></td><td>Search</td></tr>
+    <tr><td><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>N</kbd> (<kbd>⌘</kbd>+<kbd>⌥</kbd>+<kbd>N</kbd>)</td><td>New note</td></tr>
+    <tr><td><kbd>Ctrl</kbd>+<kbd>B</kbd> / <kbd>Ctrl</kbd>+<kbd>I</kbd></td><td>Bold / italic</td></tr>
+    <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>L</kbd></td><td>Make the line a checklist item</td></tr>
+    <tr><td><kbd>Tab</kbd> / <kbd>Shift</kbd>+<kbd>Tab</kbd></td><td>Indent / outdent</td></tr>
+    <tr><td><kbd>Esc</kbd></td><td>Go back to the list (phone)</td></tr>
+  </table></div>
+</section>
+
+<section id="editor">
+  <h2>Editor and preview</h2>
+  <p>You write markdown. The preview shows the result: headings, bold and italic text, lists, tables, code blocks, quotes, links and images. Web addresses become links automatically.</p>
+  <p>The main window shows the source and the preview side by side. Press <kbd>e</kbd> to show only one of them. The setting <em>Editor layout in the main window</em> sets the default.</p>
+  <div class="shot">{{shot:desktop-split:Source and preview side by side}}</div>
+</section>
+
+<section id="notes">
+  <h2>Titles, checklists and tags</h2>
+  <ul>
+    <li><strong>Title:</strong> the first line of a note is its title. A <code>#</code> heading mark is not part of the title.</li>
+    <li><strong>Checklist:</strong> write <code>- [ ] task</code>. Click the box in the preview to tick it. omajot changes the source for you.</li>
+    <li><strong>Tags:</strong> write <code>#word</code> anywhere in the text. A tag starts after a space or at the start of a line. Headings (<code># Title</code>), code and numbers such as <code>#123</code> are not tags. Tags are not case-sensitive.</li>
+  </ul>
+  <p>Click a tag in the sources column to show all notes with that tag.</p>
+</section>
+
+<section id="folders">
+  <h2>Folders, pins and the Trash</h2>
+  <ul>
+    <li>Folders can contain folders. Use the <strong>+</strong> button next to <em>FOLDERS</em> to add one. To rename, move or delete a folder, hover it in the plugin, or tap <strong>•••</strong> in the web app.</li>
+    <li>When you delete a folder, its notes move to <em>Notes</em> and its subfolders move up one level.</li>
+    <li>Pinned notes show first in every list.</li>
+    <li>The Trash keeps deleted notes. Open a note in the Trash and restore it with <kbd>x</kbd>.</li>
+  </ul>
+</section>
+
+<section id="paste">
+  <h2>Paste and attachments</h2>
+  <p>In the plugin, <kbd>Ctrl</kbd>+<kbd>V</kbd> looks at all formats on the clipboard and takes the best one:</p>
+  <ol>
+    <li>An image, for example a screenshot, becomes an attachment.</li>
+    <li>Files copied in a file manager become attachments.</li>
+    <li>Markdown, for example from LibreOffice, stays as it is.</li>
+    <li>HTML, for example from a web page, becomes markdown. Checkboxes become checklist items.</li>
+    <li>Plain text stays as it is.</li>
+  </ol>
+  <p>Images inside pasted text also become attachments. The plugin downloads remote images too, so your notes do not break when a web page changes. The web app keeps remote images as links, because the browser does not allow the download.</p>
+  <p>Attachments are named by their SHA-256 hash, for example <code>attachments/3f2a….png</code>. The same image is stored once. The hub stores it once for all devices. In the web app, paste an image, drop it, or use the camera button.</p>
+</section>
+
+<section id="sync">
+  <h2>Sync and offline</h2>
+  <p>Every device keeps a full copy of your notes. You can read, write and search without a network. omajot sends your changes when the hub is reachable again.</p>
+  <p>If you change the same note on two devices, omajot merges both changes. There are no conflict copies.</p>
+  <p>The plugin shows the sync state next to the omajot name, for example <em>Synced</em> or <em>Offline · 3 unsent</em>. The web app shows it at the bottom of the folders column, for example <em>Up to date</em>.</p>
+</section>
+
+<section id="webapp">
+  <h2>The web app</h2>
+  <p>Open your hub URL on a phone, a tablet or another computer. On a wide screen the web app shows three columns. On a phone it shows one view at a time: folders, notes, or the note.</p>
+  <div class="iphones three">
+    <figure><div class="iphone">{{shot:iphone-folders:Folders and tags on an iPhone}}</div><figcaption>Folders and tags</figcaption></figure>
+    <figure><div class="iphone">{{shot:iphone-list:The note list on an iPhone}}</div><figcaption>The note list</figcaption></figure>
+    <figure><div class="iphone">{{shot:iphone-note:A note in preview on an iPhone}}</div><figcaption>A note in preview</figcaption></figure>
+  </div>
+  <p>Install the web app on the desktop too: in Chrome or Edge, use <em>Install app</em>. We test the web app in Chrome and Chromium on the desktop and in Safari on iOS 26. Other modern browsers should work.</p>
+  <p>Add the web app to the home screen: on an iPhone or iPad, tap <em>Share</em> → <em>Add to Home Screen</em>. The web app then starts offline too. Open it in one tab only: a second tab asks which tab keeps the notes.</p>
+</section>
+
+<section id="settings">
+  <h2>Plugin settings</h2>
+  <p>Change the settings in the Omarchy bar settings, or with <code>omarchy bar set io.github.renerocksai.omajot &lt;key&gt; &lt;value&gt;</code>.</p>
+  <div class="table"><table>
+    <tr><th>Key</th><th>Default</th><th>Meaning</th></tr>
+    <tr><td><code>hubUrl</code></td><td>empty</td><td>The hub URL. Empty: use <code>hub</code> from <code>~/.config/omajot/config.json</code>.</td></tr>
+    <tr><td><code>dataDir</code></td><td>empty</td><td>Where the notes are stored on this computer. Empty: <code>~/.local/share/omajot</code>.</td></tr>
+    <tr><td><code>previewMode</code></td><td><code>split</code></td><td>The editor layout in the main window: <code>split</code>, <code>source</code> or <code>preview</code>.</td></tr>
+    <tr><td><code>fontSize</code></td><td><code>0</code></td><td>The editor font size. 0 uses the theme size.</td></tr>
+    <tr><td><code>daemonPath</code></td><td>empty</td><td>A different <code>omajot</code> binary. Empty: <code>zig-out/bin/omajot</code> in the plugin folder (a local build) if it exists, else <code>bin/omajot</code> (the release binary).</td></tr>
+  </table></div>
+</section>

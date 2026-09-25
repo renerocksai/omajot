@@ -1,0 +1,151 @@
+<!-- {"title": "Get started · omajot", "nav": "Get started", "description": "Run your omajot hub, connect it with Tailscale, install the Omarchy plugin, open omajot on your phone and import your Joplin notes."} -->
+<div class="page-head">
+  <p class="eyebrow">Get started</p>
+  <h1>Set up omajot</h1>
+  <p class="lede">You need a hub on a computer that is always on, and Tailscale on all your devices. On Omarchy, add the plugin to your bar. Without Omarchy, use the web app. The setup takes about 15 minutes. omajot releases have static binaries, so you do not need a compiler.</p>
+  <nav class="toc" aria-label="On this page">
+    <a href="#try">Try it locally</a><a href="#need">What you need</a><a href="#web-only">Without Omarchy</a><a href="#hub">1 · Hub</a><a href="#tailscale">2 · Tailscale</a><a href="#plugin">3 · Plugin</a><a href="#config">4 · Config</a><a href="#phone">5 · Phone</a><a href="#source">Build from source</a><a href="#joplin">Import from Joplin</a><a href="#update">Update</a>
+  </nav>
+</div>
+
+<section id="try">
+  <h2>Try it locally first</h2>
+  <p>You can try the web app on one computer, without Tailscale. This example uses the sample notes from the repository.</p>
+<pre class="cmd"><code><span class="p">$ </span>git clone https://github.com/renerocksai/omajot && cd omajot
+<span class="p">$ </span>tools/install-release.sh
+<span class="p">$ </span>bin/omajot hub --port 8787 --data /tmp/omajot-demo --no-auth &amp;
+<span class="p">$ </span>tools/seed_sample.py --data /tmp/omajot-demo-replica --hub http://127.0.0.1:8787</code></pre>
+  <p>Open <code>http://127.0.0.1:8787</code> in your browser. <code>--no-auth</code> turns off the login check. The hub accepts it only on the loopback address.</p>
+</section>
+
+<section id="need">
+  <h2>What you need</h2>
+  <ul>
+    <li>A computer that is always on, for the hub. macOS and Linux work. Windows is experimental. A Mac mini, a home server or a small VPS is a good choice.</li>
+    <li>A Tailscale account. <a href="https://tailscale.com">Tailscale</a> is free for personal use.</li>
+    <li><code>curl</code> and Python 3 for <code>tools/install-release.sh</code>. Python 3 also runs the Joplin import.</li>
+    <li>For the plugin: an Omarchy desktop. The plugin is optional. The web app is a complete client.</li>
+    <li>No compiler. If you want to build omajot yourself, see <a href="#source">Build from source</a>.</li>
+  </ul>
+</section>
+
+<section id="web-only">
+  <h2>Without Omarchy: the hub and the web app</h2>
+  <p>You do not need Omarchy or Linux. The web app is a complete omajot client. Do steps 1 and 2 below, then:</p>
+  <ol class="steps">
+    <li><h3>Open the hub URL in a desktop browser</h3><p>Open <code>https://your-mac.your-tailnet.ts.net:8443</code>. Install it as an app: in Chrome or Edge, use <em>Install app</em> in the address bar or in the browser menu.</p></li>
+    <li><h3>Open it on your phone</h3><p>Use a QR code, as shown in <a href="#phone">step 5</a>. On an iPhone or iPad, tap <em>Share</em> → <em>Add to Home Screen</em>. On Android, tap <em>Install app</em> in the browser menu.</p></li>
+  </ol>
+  <p>Your notes work offline. They sync when the hub is reachable. Skip steps 3 and 4: they are only for the Omarchy plugin.</p>
+  <div class="note"><p>We test the web app in Chrome and Chromium on the desktop and in Safari on iOS 26. Other modern browsers should work.</p></div>
+</section>
+
+<section id="hub">
+  <h2>1 · Run the hub</h2>
+  <p>The hub stores all changes and sends them to your devices. It also serves the web app. Do these steps on the computer that is always on.</p>
+<pre class="cmd"><code><span class="p">$ </span>git clone https://github.com/renerocksai/omajot && cd omajot
+<span class="p">$ </span>tools/install-release.sh
+<span class="p">$ </span>tmux new -s omajot-hub
+<span class="p">$ </span>bin/omajot hub --port 8787 --data ~/omajot-data --login you@example.com</code></pre>
+  <p><code>tools/install-release.sh</code> downloads the released binary for this computer from the GitHub release. It checks the SHA-256 of the file against <code>release.json</code>, which is in the repository. Then it installs the binary into <code>bin/omajot</code>. If there is no release yet, <a href="#source">build from source</a>.</p>
+  <p>On Windows (experimental), download <code>omajot-x86_64-windows.exe</code> from the <a href="https://github.com/renerocksai/omajot/releases">releases</a>. The Windows binary builds on the IOCP backend of bounded/http. We did not run it as a hub yet.</p>
+  <p>Replace <code>you@example.com</code> with your Tailscale login name. The Tailscale admin console shows it on the <em>Users</em> page. The hub accepts API requests only from this login.</p>
+  <p>The hub listens on <code>127.0.0.1</code> only. It writes all changes to <code>~/omajot-data/batches.jsonl</code> and all images to <code>~/omajot-data/blobs/</code>. Include this folder in your backups.</p>
+  <div class="note"><p>Detach from tmux with <kbd>Ctrl</kbd>+<kbd>b</kbd> <kbd>d</kbd>. The hub continues to run. A start at boot (launchd or systemd) is not part of omajot yet.</p></div>
+</section>
+
+<section id="tailscale">
+  <h2>2 · Publish the hub with Tailscale</h2>
+  <p>Install Tailscale on the hub computer, on your Omarchy computer and on your phone. Log in with the same account on all devices. Then, on the hub computer, run:</p>
+<pre class="cmd"><code><span class="p">$ </span>tailscale serve --bg --https=8443 http://127.0.0.1:8787</code></pre>
+  <p>Tailscale gives the hub a real HTTPS certificate. Your hub URL is now <code>https://your-mac.your-tailnet.ts.net:8443</code>. The hub prints this URL and a QR code when it starts. Restart the hub after you run <code>tailscale serve</code>, so that it finds the URL.</p>
+  <ul>
+    <li>Enable HTTPS certificates for your tailnet: admin console → DNS → HTTPS Certificates.</li>
+    <li>The first HTTPS request can take about 30 seconds, because Tailscale gets the certificate then. Open the URL once with <code>curl</code>.</li>
+    <li>Do not use Tailscale Funnel. Funnel makes the hub public on the internet.</li>
+  </ul>
+</section>
+
+<section id="plugin">
+  <h2>3 · Install the plugin (Omarchy)</h2>
+  <p>Do this step on your Omarchy computer:</p>
+<pre class="cmd"><code><span class="p">$ </span>omarchy plugin add https://github.com/renerocksai/omajot --enable</code></pre>
+  <p>When the plugin starts the first time, it runs <code>tools/install-release.sh</code>. The script downloads the omajot binary for this computer, checks its SHA-256 and installs it into <code>bin/omajot</code>. If the plugin folder has a local build in <code>zig-out/bin/omajot</code>, the plugin uses that build.</p>
+  <p>A note icon appears in the bar. Click it to open the dropdown. Middle-click it to open the main window.</p>
+</section>
+
+<section id="config">
+  <h2>4 · Tell omajot where your hub is</h2>
+  <p>Create <code>~/.config/omajot/config.json</code>:</p>
+<pre><code>{
+  "hub": "https://your-mac.your-tailnet.ts.net:8443"
+}</code></pre>
+  <p>The plugin and the command line both read this file. Restart the shell, or change a plugin setting, to reload it. Without a hub, omajot keeps your notes on this computer only. See <a href="cli.html#config">the config file</a> for all fields.</p>
+</section>
+
+<section id="phone">
+  <h2>5 · Use omajot on your phone</h2>
+  <p>Get your phone onto the hub with a QR code. You do not type the URL. There are three ways to show the code:</p>
+  <ol class="steps">
+    <li><h3>The hub</h3><p><code>omajot hub</code> prints its phone URL and a QR code in the terminal when it starts. It finds the URL in <code>tailscale serve status</code>. <code>--url</code> sets the URL. Look at the start output in the tmux session of the hub.</p></li>
+    <li><h3>omajot qr</h3><p>Run <code>omajot qr</code> on any computer where <code>~/.config/omajot/config.json</code> has your hub.</p></li>
+    <li><h3>The web app or the plugin</h3><p>Open the hub URL once in a desktop browser. Click the phone button in the web app. It shows the address of the page as a QR code. The phone button in the plugin shows the hub URL.</p></li>
+  </ol>
+  <p>Then point the phone camera at the QR code and open the link. The phone needs Tailscale. It is free for personal use: <a href="https://tailscale.com/download">https://tailscale.com/download</a>. On an iPhone or iPad, tap <em>Share</em> → <em>Add to Home Screen</em>. On Android, tap <em>Install app</em> in the browser menu. The web app then starts like a normal app, also offline.</p>
+  <div class="terminal" aria-label="Terminal output of omajot qr">
+    <div class="bar"><i></i><i></i><i></i></div>
+<pre><span class="p">$</span> omajot qr
+{{qr_terminal}}</pre>
+  </div>
+  <p class="muted" style="margin-top:14px">The plugin keeps its <code>omajot</code> binary in <code>~/.config/omarchy/plugins/io.github.renerocksai.omajot/bin/</code> (or <code>zig-out/bin/</code> for a local build). Add this folder to your <code>PATH</code>, or use the full path.</p>
+  <div class="shot">{{shot:desktop-qr:The web app shows its URL as a QR code}}</div>
+  <p>Without a hub, every QR view shows these steps instead:</p>
+  <div class="note">
+    <p><strong>Use omajot on your phone:</strong></p>
+    <ol>
+      <li>Run <code>omajot hub</code> on a computer that is always on.</li>
+      <li>Install Tailscale on that computer and on your phone. Tailscale is free for personal use: <a href="https://tailscale.com">https://tailscale.com</a></li>
+      <li>On the hub computer, run <code>tailscale serve --bg --https=8443 http://127.0.0.1:8787</code>.</li>
+      <li>Put the hub URL in ~/.config/omajot/config.json.</li>
+    </ol>
+  </div>
+</section>
+
+<section id="source">
+  <h2>Build from source</h2>
+  <p>omajot needs Zig 0.16.0 exactly.</p>
+  <ul>
+    <li><strong>Omarchy and Arch Linux:</strong> run <code>omarchy pkg add zig</code>. Arch ships Zig 0.16.0 today. If Arch has a newer Zig, install 0.16.0 with mise: <code>mise use -g zig@0.16.0</code>.</li>
+    <li><strong>macOS:</strong> download Zig 0.16.0 from <a href="https://ziglang.org/download/">ziglang.org</a>, or use mise: <code>mise use -g zig@0.16.0</code>.</li>
+  </ul>
+  <p>Check the version with <code>zig version</code>. It must show <code>0.16.0</code>.</p>
+  <div class="note"><p>Do not use <code>omarchy-install-dev-env zig</code>. It installs the latest Zig, and a newer Zig cannot build omajot.</p></div>
+  <p>For the plugin, build in the plugin folder. The plugin then uses <code>zig-out/bin/omajot</code>:</p>
+<pre class="cmd"><code><span class="p">$ </span>cd ~/.config/omarchy/plugins/io.github.renerocksai.omajot
+<span class="p">$ </span>zig build -Doptimize=ReleaseSafe
+<span class="p">$ </span>omarchy restart shell</code></pre>
+  <p>For the hub, build in your clone and start <code>zig-out/bin/omajot hub …</code> instead of <code>bin/omajot hub …</code>.</p>
+</section>
+
+<section id="joplin">
+  <h2>Import your Joplin notes</h2>
+  <p>The importer reads your Joplin database. It does not change it. It copies all notebooks, notes, tags and images into omajot and keeps the dates of your notes.</p>
+<pre class="cmd"><code><span class="p">$ </span>cd ~/.config/omarchy/plugins/io.github.renerocksai.omajot
+<span class="p">$ </span>tools/import_joplin.py --dry-run
+<span class="p">$ </span>tools/import_joplin.py --data ~/omajot-import</code></pre>
+  <p>The importer uses your own build (<code>zig-out</code>) if there is one, else the release binary (<code>bin/omajot</code>).</p>
+  <ul>
+    <li>Start Joplin once and let it sync before you import. Then the database has your latest notes.</li>
+    <li>Use a separate <code>--data</code> folder, as shown. The importer then has its own copy. It sends the notes to the hub, and the plugin gets them from there.</li>
+    <li>You can run the importer again. It remembers what it imported in <code>~/omajot-import/import-joplin.json</code> and skips those notes.</li>
+    <li>Notebooks become folders. The note title becomes the first line. Joplin tags become <code>#tags</code> on the last line. Images become attachments.</li>
+  </ul>
+</section>
+
+<section id="update">
+  <h2>Update omajot</h2>
+<pre class="cmd"><code><span class="p">$ </span>omarchy plugin update io.github.renerocksai.omajot
+<span class="p">$ </span>~/.config/omarchy/plugins/io.github.renerocksai.omajot/tools/install-release.sh
+<span class="p">$ </span>omarchy restart shell</code></pre>
+  <p><code>tools/install-release.sh</code> downloads a binary only if <code>bin/omajot</code> does not match the release in <code>release.json</code>. On the hub computer, run <code>git pull</code> and <code>tools/install-release.sh</code>. Then restart the hub in its tmux session. If you build from source, run <code>zig build -Doptimize=ReleaseSafe</code> instead.</p>
+</section>

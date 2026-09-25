@@ -1,0 +1,169 @@
+<!-- {"title": "Under the hood · omajot", "nav": "Under the hood", "description": "How omajot works: a Zig CRDT, edit and patch transforms, an append-only hub with an SSE doorbell, everything bounded with baz on bounded/http, and one Zig core for native and WebAssembly."} -->
+<div class="page-head">
+  <p class="eyebrow">For the nerds</p>
+  <h1>Under the hood</h1>
+  <p class="lede">omajot is written in Zig 0.16 and QML. This page explains the parts: the architecture, the CRDT, the hub, the limits, and the one core that runs natively and in the browser.</p>
+  <nav class="toc" aria-label="On this page">
+    <a href="#architecture">Architecture</a><a href="#crdt">The CRDT</a><a href="#transform">Edits and patches</a><a href="#hub">The hub</a><a href="#bounded">Everything bounded</a><a href="#wasm">One core, native and WASM</a><a href="#binary">One static binary</a><a href="#tests">Tests</a>
+  </nav>
+</div>
+
+<section id="architecture">
+  <h2>Architecture</h2>
+  <p>One hub stores and forwards changes. Every device keeps a full copy of all notes. The hub never merges anything: it only moves operations and attachments.</p>
+  <div class="diagram" role="img" aria-label="The hub in the middle, the Omarchy desktop and the phones as full replicas">
+    <svg viewBox="0 0 900 360">
+      <rect class="box hub" x="330" y="24" width="240" height="118" rx="14"/>
+      <text x="450" y="54" text-anchor="middle" font-weight="700">omajot hub</text>
+      <text x="450" y="76" text-anchor="middle" class="small">baz on bounded/http · 127.0.0.1</text>
+      <text x="450" y="96" text-anchor="middle" class="small">append-only log · blobs · web app</text>
+      <text x="450" y="122" text-anchor="middle" class="small">tailscale serve → https://…ts.net</text>
+      <rect class="box" x="40" y="214" width="360" height="120" rx="14"/>
+      <text x="220" y="244" text-anchor="middle" font-weight="700">Omarchy desktop</text>
+      <text x="220" y="268" text-anchor="middle" class="small">QML plugin: bar dropdown + main window</text>
+      <text x="220" y="288" text-anchor="middle" class="small">⇅ JSON lines on stdin / stdout</text>
+      <text x="220" y="308" text-anchor="middle" class="small">omajot daemon: Zig core (native) + replica</text>
+      <rect class="box" x="500" y="214" width="360" height="120" rx="14"/>
+      <text x="680" y="244" text-anchor="middle" font-weight="700">Phone, tablet, other computers</text>
+      <text x="680" y="268" text-anchor="middle" class="small">web app: CodeMirror editor</text>
+      <text x="680" y="288" text-anchor="middle" class="small">⇅ the same protocol through omj_call</text>
+      <text x="680" y="308" text-anchor="middle" class="small">core.wasm: the same Zig core + IndexedDB</text>
+      <path class="wire" d="M220 214 C220 170 360 170 390 142"/><path class="wire" d="M680 214 C680 170 540 170 510 142"/>
+      <text x="200" y="176" class="small">POST batches · GET pages · SSE</text>
+      <text x="560" y="176" class="small">HTTPS over Tailscale</text>
+    </svg>
+  </div>
+  <p>Tailscale connects the devices. <code>tailscale serve</code> terminates HTTPS with a real certificate and adds the caller's identity as a header. The hub listens on loopback only and admits exactly one login.</p>
+</section>
+
+<section id="crdt">
+  <h2>The CRDT</h2>
+  <p>You can edit the same note on a laptop in a plane and on a phone at the same time. When both come online, omajot merges the edits. It uses a CRDT (conflict-free replicated data type), written from scratch in Zig.</p>
+  <ul>
+    <li><strong>Text:</strong> an RGA sequence. Every inserted character has an id and remembers its left neighbour. Runs of typed text are one item, not one item per character.</li>
+    <li><strong>Ids:</strong> Lamport counters shared by all replicas. An insert of <em>n</em> characters uses <em>n</em> counters.</li>
+    <li><strong>Folder, pin, trash, names:</strong> last-writer-wins registers, ordered by a hybrid logical clock, then by replica and counter.</li>
+    <li><strong>Folder moves:</strong> a move that would make a cycle is dropped. The folder becomes a top-level folder.</li>
+    <li><strong>Order does not matter:</strong> an operation that arrives before the operation it depends on waits inside the engine.</li>
+  </ul>
+  <p>Operations are small JSON objects, for example <code>{"v":1,"k":"ins","r":"…","c":42,"t":…,"n":"…","o":"…","s":"hello"}</code>. The hub stores them without reading them.</p>
+</section>
+
+<section id="transform">
+  <h2>Edits and patches</h2>
+  <p>The editor and the engine run in different processes. You can type while a change from another device arrives. Then your edit and the remote patch cross on the pipe.</p>
+  <p>omajot solves this with two-party operational transformation, in the style of the Jupiter system:</p>
+  <ul>
+    <li>The client numbers its edits (<code>seq</code>). The engine numbers its patches (<code>pseq</code>).</li>
+    <li>Each edit carries <code>ack</code>: the last patch the client applied. The engine transforms the edit over newer patches.</li>
+    <li>Each patch carries <code>base</code>: the last edit the engine applied. The client transforms the patch over newer edits.</li>
+    <li>Remote changes win ties on both sides, so both sides get the same text.</li>
+  </ul>
+  <p>The reference is <code>src/core/ot.zig</code>. The QML plugin and the web app port it line by line and test their ports.</p>
+  <p>Undo works on your own edits only. The built-in undo of the text field would also undo changes from other devices, so omajot replaces it.</p>
+</section>
+
+<section id="hub">
+  <h2>The hub</h2>
+  <ul>
+    <li><strong>Append-only log:</strong> every accepted batch of operations goes to <code>batches.jsonl</code>. The hub calls <code>fsync</code> before it replies. After a crash, it drops a torn last line and continues.</li>
+    <li><strong>Idempotent pushes:</strong> each client numbers its batches. A repeated batch gets its original sequence number, so a client can resend after any failure.</li>
+    <li><strong>Pages:</strong> clients pull batches after their cursor, in pages of at most {{bytes:src/hub/store.zig:max_page_bytes}} or {{num:src/hub/store.zig:max_page_limit}} batches.</li>
+    <li><strong>SSE doorbell:</strong> <code>GET /api/events</code> sends only the newest sequence number. A client then pulls. A lost or repeated event is harmless, because clients compare numbers and never count events. Browsers reconnect with <code>Last-Event-ID</code>.</li>
+    <li><strong>Blobs:</strong> attachments are stored under their SHA-256 hash. The hub checks the hash of every upload.</li>
+  </ul>
+</section>
+
+<section id="bounded">
+  <h2>Everything bounded</h2>
+  <p>The hub runs on <a href="https://technologylab-ai.github.io/baz/">baz</a>, a Zig web framework on the <a href="https://technologylab-ai.github.io/bounded-http/">bounded/http</a> engine (io_uring on Linux, kqueue on macOS). Both follow one rule: set explicit limits, and reserve memory and threads before the first request. When a limit is reached, the server refuses or waits. It does not grow.</p>
+  <p>omajot sets its limits as named constants in the source. The build of this site reads them from the code:</p>
+  <div class="table"><table>
+    <tr><th>Limit</th><th>Value</th><th>Where</th></tr>
+    <tr><td>Connections</td><td>{{num:src/hub/hub.zig:connections}}</td><td><code>src/hub/hub.zig</code></td></tr>
+    <tr><td>Worker threads</td><td>{{num:src/hub/hub.zig:workers}}</td><td><code>src/hub/hub.zig</code></td></tr>
+    <tr><td>Waiting event streams</td><td>{{num:src/hub/hub.zig:max_subscribers}}</td><td><code>src/hub/hub.zig</code></td></tr>
+    <tr><td>Memory budget of the HTTP engine</td><td>{{bytes:src/hub/hub.zig:memory_budget_bytes}}</td><td><code>src/hub/hub.zig</code></td></tr>
+    <tr><td>Request body (one batch or one blob chunk)</td><td>{{bytes:src/hub/store.zig:max_batch_bytes}}</td><td><code>src/hub/store.zig</code>, <code>blobs.zig</code></td></tr>
+    <tr><td>Attachment</td><td>{{bytes:src/hub/blobs.zig:max_blob_bytes}}, in chunks of {{bytes:src/hub/blobs.zig:max_chunk_bytes}}</td><td><code>src/hub/blobs.zig</code></td></tr>
+    <tr><td>Request deadline</td><td>{{ms:src/hub/hub.zig:request_timeout_ms}}</td><td><code>src/hub/hub.zig</code></td></tr>
+    <tr><td>Event stream route deadline</td><td>{{ms:src/hub/hub.zig:sse_timeout_ms}}</td><td><code>src/hub/hub.zig</code></td></tr>
+    <tr><td>Idle keep-alive wait</td><td>{{ms:src/hub/hub.zig:idle_timeout_ms}}</td><td><code>src/hub/hub.zig</code></td></tr>
+    <tr><td>Event stream ends before the deadline</td><td>{{ms:src/hub/hub.zig:sse_margin_ms}}</td><td><code>src/hub/hub.zig</code></td></tr>
+    <tr><td>Heartbeat on idle event streams</td><td>{{ms:src/hub/hub.zig:heartbeat_ms}}</td><td><code>src/hub/hub.zig</code></td></tr>
+    <tr><td>Web app files</td><td>{{num:src/hub/static.zig:max_files}} files, {{bytes:src/hub/static.zig:max_total_bytes}} in total</td><td><code>src/hub/static.zig</code></td></tr>
+    <tr><td>Log loaded at start</td><td>{{bytes:src/hub/store.zig:max_log_bytes}}</td><td><code>src/hub/store.zig</code></td></tr>
+  </table></div>
+  <h3>Why request bodies are 1 MiB</h3>
+  <p>bounded/http reserves the body buffers of all connections when it starts: two buffers of <code>max_body</code> per connection. With {{num:src/hub/hub.zig:connections}} connections, 16 MiB bodies would reserve 24 × 2 × 16 MiB = 768 MiB. 1 MiB bodies reserve 48 MiB. So a batch has at most 1 MiB, and a large image goes up in 1 MiB chunks. The hub resumes an interrupted upload at the last good chunk.</p>
+  <h3>Deadlines</h3>
+  <p>In bounded/http, a deadline covers the whole request, also a long event stream. The hub uses three separate limits:</p>
+  <ul>
+    <li><strong>Normal requests:</strong> {{ms:src/hub/hub.zig:request_timeout_ms}}. This covers one batch or one image chunk.</li>
+    <li><strong>The event stream:</strong> its own route deadline of {{ms:src/hub/hub.zig:sse_timeout_ms}} (a baz route option). The hub ends each stream {{ms:src/hub/hub.zig:sse_margin_ms}} before this deadline, with a clean end of the stream. The client reconnects at once.</li>
+    <li><strong>Idle keep-alive connections:</strong> {{ms:src/hub/hub.zig:idle_timeout_ms}}. A request's own deadline starts at its first byte, so the idle time before a request does not shorten it.</li>
+  </ul>
+  <p>The per-route deadlines and the separate idle timeout came into baz and bounded/http during the work on omajot.</p>
+</section>
+
+<section id="wasm">
+  <h2>One core, native and WASM</h2>
+  <p>The core in <code>src/core/</code> holds the CRDT, the note model, the protocol engine, the HTML-to-markdown converter and the QR encoder. It is pure Zig: no <code>std.Io</code>, no clock, no randomness, no global state. The caller passes the allocator and the time. Bytes go in, bytes come out.</p>
+  <p>This makes one core possible for all devices:</p>
+  <div class="stats">
+    <div><strong>1</strong><span>engine, the same Zig code</span></div>
+    <div><strong>{{wasm_kib}} KiB</strong><span><code>core.wasm</code>, ReleaseSmall</span></div>
+    <div><strong>{{wasm_gzip_kib}} KiB</strong><span>gzip -9 of <code>core.wasm</code></span></div>
+    <div><strong>3</strong><span>places for one QR encoder</span></div>
+  </div>
+  <ul>
+    <li><strong>Native:</strong> <code>omajot daemon</code> links the core. It adds files, the network and the clipboard around it.</li>
+    <li><strong>WebAssembly:</strong> <code>zig build wasm</code> compiles the same core for <code>wasm32-freestanding</code>. The web app loads <code>core.wasm</code> and adds IndexedDB and <code>fetch</code> around it.</li>
+    <li><strong>One vocabulary:</strong> the plugin sends JSON lines to the daemon. The web app sends the same JSON to <code>omj_call</code>. Both get the same replies and events.</li>
+    <li><strong>UTF-16 positions:</strong> QML, JavaScript and CodeMirror count text in UTF-16 units. The core stores text the same way, so no side converts positions.</li>
+    <li><strong>One QR encoder:</strong> <code>omajot qr</code> and the hub print it in the terminal. The plugin draws it from the daemon's reply. The web app draws it from <code>core.wasm</code>.</li>
+  </ul>
+<pre><code><span class="c">// the whole wasm interface (src/wasm/wasm.zig)</span>
+omj_alloc(len) → ptr            omj_free(ptr, len)
+omj_engine_new(replica_lo, replica_hi) → handle
+omj_call(handle, ptr, len, now_ms) → result     <span class="c">// one request, reply + events</span>
+omj_ingest(handle, ptr, len) → result           <span class="c">// operations from the hub</span>
+omj_take_new_ops(handle) → result               <span class="c">// operations to send</span>
+omj_pending(handle)      omj_engine_free(handle)      omj_free_result(result)</code></pre>
+</section>
+
+<section id="binary">
+  <h2>One static binary</h2>
+  <p>omajot is one program: <code>omajot hub</code>, <code>omajot daemon</code> and <code>omajot qr</code> are subcommands of the same binary.</p>
+  <ul>
+    <li><strong>Static on Linux:</strong> native Linux builds use the musl ABI (<code>build.zig</code>: <code>default_target .abi = .musl</code>). There are no glibc shared objects to match. <code>ldd</code> reports "not a dynamic executable", and <code>file</code> reports "statically linked".</li>
+    <li><strong>Small:</strong> a release build (<code>zig build -Doptimize=ReleaseSafe -Dstrip=true</code>) is about 2 MB. Safety checks stay on in ReleaseSafe.</li>
+    <li><strong>Cross-compiled:</strong> one Linux runner builds all five release targets. The release workflow pins their SHA-256 in <code>release.json</code>. <code>tools/install-release.sh</code> and the plugin check a download against it before they install it.</li>
+    <li><strong>libc:</strong> omajot's own code does not need libc. baz and bounded/http still link libc. Upstream changes to remove this are in progress. Then Linux builds can drop libc completely.</li>
+    <li><strong>The same core, also in the browser:</strong> the pure core goes to <code>wasm32-freestanding</code> too, as <code>core.wasm</code> ({{wasm_kib}} KiB).</li>
+  </ul>
+  <div class="table"><table>
+    <tr><th>Release target</th><th>Size (stripped, ReleaseSafe)</th></tr>
+    <tr><td><code>x86_64-linux-musl</code></td><td>1.89 MB</td></tr>
+    <tr><td><code>aarch64-linux-musl</code></td><td>1.58 MB</td></tr>
+    <tr><td><code>aarch64-macos</code></td><td>1.49 MB</td></tr>
+    <tr><td><code>x86_64-macos</code></td><td>1.69 MB</td></tr>
+    <tr><td><code>x86_64-windows-gnu</code> (experimental)</td><td>2.18 MB</td></tr>
+  </table></div>
+  <p class="muted">Measured on 2026-09-25 with Zig 0.16.0, cross-compiled on one x86_64 Linux computer.</p>
+</section>
+
+<section id="tests">
+  <h2>Tests</h2>
+  <ul>
+    <li><strong>Convergence:</strong> 4 replicas make 150 random changes each, for 30 seeds. They exchange operations late, out of order and twice. At the end, every replica must show the same notes, folders and text.</li>
+    <li><strong>Editor and engine:</strong> for 100 seeds, a simulated editor types while remote patches cross its edits. The text in the editor must equal the text in the engine.</li>
+    <li><strong>Transform:</strong> the edit and patch transform converges under random delays, for 300 seeds.</li>
+    <li><strong>Replay:</strong> a replica that replays its own log gets the same state back.</li>
+    <li><strong>QR codes:</strong> a test encodes every length from 1 to 213 bytes, across all ten QR versions.</li>
+    <li><strong>End to end:</strong> two browsers sync through a real hub, go offline and come back. Two daemons sync through the hub over Tailscale.</li>
+  </ul>
+<pre class="cmd"><code><span class="p">$ </span>zig build test
+<span class="p">$ </span>npm test
+<span class="p">$ </span>cd web && npm test && npm run e2e</code></pre>
+</section>

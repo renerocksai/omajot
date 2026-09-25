@@ -1,0 +1,33 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: 0.16.0
+      - name: Zig tests (core, hub, daemon)
+        run: zig build test --summary all
+      - name: Build core.wasm
+        run: zig build wasm
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # tools/v4-smoke.sh (Qt's JS engine) needs a local Qt 6; run it with `npm test`.
+      - name: Plugin model tests
+        run: node --test tests/*.test.mjs
+      - name: Web app tests
+        working-directory: web
+        run: |
+          npm ci
+          npm test

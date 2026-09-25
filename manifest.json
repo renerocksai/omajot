@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "id": "io.github.renerocksai.omajot",
+  "name": "omajot",
+  "version": "0.1.0",
+  "author": "renerocksai",
+  "license": "MIT",
+  "description": "Markdown notes in the bar: quick capture, a main window, and sync through your own hub.",
+  "kinds": [
+    "service",
+    "bar-widget",
+    "panel"
+  ],
+  "entryPoints": {
+    "service": "Service.qml",
+    "barWidget": "BarWidget.qml",
+    "panel": "Panel.qml"
+  },
+  "barWidget": {
+    "displayName": "omajot",
+    "description": "A note icon in the bar; click for quick notes, open the main window for everything else",
+    "category": "Productivity",
+    "allowMultiple": false,
+    "defaultSection": "center",
+    "defaults": {
+      "hubUrl": "https://your-mac.your-tailnet.ts.net:8443",
+      "dataDir": "",
+      "previewMode": "split",
+      "fontSize": 0,
+      "daemonPath": ""
+    },
+    "schema": [
+      {
+        "key": "hubUrl",
+        "type": "string",
+        "label": "Hub URL",
+        "defaultValue": "https://your-mac.your-tailnet.ts.net:8443",
+        "description": "Your omajot hub, published on the tailnet with tailscale serve."
+      },
+      {
+        "key": "dataDir",
+        "type": "string",
+        "label": "Local data directory",
+        "defaultValue": "",
+        "description": "Leave empty for ~/.local/share/omajot."
+      },
+      {
+        "key": "previewMode",
+        "type": "enum",
+        "label": "Editor layout in the main window",
+        "options": [
+          "split",
+          "source",
+          "preview"
+        ],
+        "defaultValue": "split"
+      },
+      {
+        "key": "fontSize",
+        "type": "integer",
+        "label": "Editor font size (0 = theme)",
+        "min": 0,
+        "max": 40,
+        "step": 1,
+        "defaultValue": 0
+      },
+      {
+        "key": "daemonPath",
+        "type": "string",
+        "label": "Daemon binary (advanced)",
+        "defaultValue": "",
+        "description": "Leave empty to use bin/omajot or zig-out/bin/omajot from the plugin."
+      }
+    ]
+  }
+}

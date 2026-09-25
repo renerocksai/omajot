@@ -1,12 +1,239 @@
-<!-- {"title": "Command line · omajot", "nav": "CLI", "description": "omajot hub, omajot daemon and omajot qr: every flag, the config file and the import tools."} -->
+<!-- {"title": "Command line · omajot", "nav": "CLI", "description": "The omajot commands for your notes (ls, cat, edit, write, history, export …), omajot hub, omajot daemon and omajot qr: every flag, the JSON output, the config file and the import tools."} -->
 <div class="page-head">
   <p class="eyebrow">Command line</p>
-  <h1>One binary, three commands</h1>
-  <p class="lede"><code>omajot</code> is one binary. It runs the hub or the desktop daemon, or it prints a QR code.</p>
+  <h1>Your notes in the terminal</h1>
+  <p class="lede"><code>omajot</code> is one binary. Its commands read and change your notes from a terminal or a script, and it runs the hub and the desktop daemon.</p>
   <nav class="toc" aria-label="On this page">
-    <a href="#hub">omajot hub</a><a href="#daemon">omajot daemon</a><a href="#qr">omajot qr</a><a href="#config">Config file</a><a href="#tools">Tools</a>
+    <a href="#notes">Note commands</a><a href="#json">JSON and exit codes</a><a href="#hub">omajot hub</a><a href="#daemon">omajot daemon</a><a href="#qr">omajot qr</a><a href="#config">Config file</a><a href="#tools">Tools</a>
   </nav>
 </div>
+
+<section id="notes">
+  <h2>Note commands</h2>
+  <p>These commands work on the notes of this computer. They use the omajot daemon: the one that the plugin started, or, when none runs, one that the command starts in the background (it stops after 10 minutes without use). Changes sync to your other devices like changes that you type in the plugin.</p>
+<pre><code>omajot &lt;command&gt; [arguments] [--json] [--data &lt;dir&gt;] [--socket &lt;path&gt;] [--no-start]</code></pre>
+  <p><strong>Address a note</strong> as <code>Folder/Subfolder/Title</code> (the title is the first line of the note, without <code>#&nbsp;</code>), as only <code>Title</code>, or by its id (<code>n-…</code>, from <code>ls -l</code> or <code>--json</code>). Case does not matter when nothing matches exactly. When a name matches two notes, the command stops with exit code 2 and lists them with their ids.</p>
+  <p><strong>Changes merge.</strong> <code>write</code>, <code>edit</code>, <code>append</code>, <code>replace</code> and <code>restore</code> apply only the parts of the text that change. When your phone changes another part of the same note at the same time, both changes stay.</p>
+  <div class="table"><table>
+    <tr><th>Command</th><th>What it does</th></tr>
+    <tr><td><a href="#ls"><code>ls</code></a></td><td>Lists the folders and notes in a folder.</td></tr>
+    <tr><td><a href="#cat"><code>cat</code></a></td><td>Writes the Markdown text of a note to stdout, exactly as stored.</td></tr>
+    <tr><td><a href="#search"><code>search</code></a></td><td>Finds the notes whose title or text contains the text.</td></tr>
+    <tr><td><a href="#new"><code>new</code></a></td><td>Makes a note.</td></tr>
+    <tr><td><a href="#write"><code>write</code></a></td><td>Makes stdin the full text of a note.</td></tr>
+    <tr><td><a href="#edit"><code>edit</code></a></td><td>Opens the note in your text editor.</td></tr>
+    <tr><td><a href="#append"><code>append</code></a></td><td>Adds the text to the end of the note, on a new line.</td></tr>
+    <tr><td><a href="#replace"><code>replace</code></a></td><td>Replaces the text <code>&lt;old&gt;</code> with <code>&lt;new&gt;</code>.</td></tr>
+    <tr><td><a href="#mv"><code>mv</code></a></td><td>Moves the note to the folder.</td></tr>
+    <tr><td><a href="#rm"><code>rm</code></a></td><td>Moves the note to the Trash.</td></tr>
+    <tr><td><a href="#mkdir"><code>mkdir</code></a></td><td>Makes the folder and its missing parent folders.</td></tr>
+    <tr><td><a href="#rmdir"><code>rmdir</code></a></td><td>Deletes an empty folder.</td></tr>
+    <tr><td><a href="#tags"><code>tags</code></a></td><td>Lists the tags (<code>#word</code> in the text) of the notes that are not in the Trash, with the number of notes, the most used first.</td></tr>
+    <tr><td><a href="#history"><code>history</code></a></td><td>Lists the versions of a note, the oldest first.</td></tr>
+    <tr><td><a href="#restore"><code>restore</code></a></td><td>Makes the text of an earlier version the current text of the note.</td></tr>
+    <tr><td><a href="#export"><code>export</code></a></td><td>Writes every note as a Markdown file: <code>&lt;dir&gt;/Folder/Subfolder/Title.md</code>.</td></tr>
+    <tr><td><a href="#status"><code>status</code></a></td><td>Shows the daemon (version, how it started), the data directory, the socket, the hub, and the sync state: online, connecting or offline, and the number of changes that the hub did not get yet.</td></tr>
+  </table></div>
+</section>
+
+<section id="ls">
+  <h3><code>omajot ls</code></h3>
+  <p>Lists the folders and notes in a folder. Without a folder: the top level. Pinned notes come first, then the notes that changed last.</p>
+<pre><code>omajot ls [folder] [-r] [-l] [--tag &lt;tag&gt;] [--trash]</code></pre>
+  <div class="table"><table>
+    <tr><th>Option</th><th>Meaning</th></tr>
+    <tr><td><code>-r, --recursive</code></td><td>Also list the notes in all subfolders, as paths.</td></tr>
+    <tr><td><code>-l, --long</code></td><td>Also show the time of the last change and the id.</td></tr>
+    <tr><td><code>--tag &lt;tag&gt;</code></td><td>Only notes with this tag (with or without <code>#</code>). Includes subfolders.</td></tr>
+    <tr><td><code>--trash</code></td><td>Only notes in the Trash. Includes subfolders.</td></tr>
+  </table></div>
+<pre class="cmd"><code><span class="p">$ </span>omajot ls
+<span class="p">$ </span>omajot ls Work -r
+<span class="p">$ </span>omajot ls --tag todo -l
+<span class="p">$ </span>omajot ls --json | jq -r '.notes[].path'</code></pre>
+</section>
+
+<section id="cat">
+  <h3><code>omajot cat</code></h3>
+  <p>Writes the Markdown text of a note to stdout, exactly as stored.</p>
+<pre><code>omajot cat &lt;note&gt; [--at &lt;time&gt;]</code></pre>
+  <div class="table"><table>
+    <tr><th>Option</th><th>Meaning</th></tr>
+    <tr><td><code>--at &lt;time&gt;</code></td><td>The text as it was at this time: <code>2026-09-26 14:03</code> (local time), <code>2026-09-26T12:03Z</code> (UTC), <code>2026-09-26</code>, or a time ago: <code>90s</code>, <code>15m</code>, <code>2h</code>, <code>3d</code>, <code>1w</code>.</td></tr>
+  </table></div>
+<pre class="cmd"><code><span class="p">$ </span>omajot cat "Work/Plans/Q3"
+<span class="p">$ </span>omajot cat n-3f9c2a1b7d4e5f60-42
+<span class="p">$ </span>omajot cat Groceries --at 2d</code></pre>
+</section>
+
+<section id="search">
+  <h3><code>omajot search</code></h3>
+  <p>Finds the notes whose title or text contains the text. Case is ignored. Writes the path of each note, the note that changed last first. Exit code 1 when no note matches.</p>
+<pre><code>omajot search &lt;text&gt; [--trash]</code></pre>
+  <div class="table"><table>
+    <tr><th>Option</th><th>Meaning</th></tr>
+    <tr><td><code>--trash</code></td><td>Search the notes in the Trash instead.</td></tr>
+  </table></div>
+<pre class="cmd"><code><span class="p">$ </span>omajot search invoice
+<span class="p">$ </span>omajot search "#todo" --json</code></pre>
+</section>
+
+<section id="new">
+  <h3><code>omajot new</code></h3>
+  <p>Makes a note. Its text is <code># &lt;title&gt;</code>, an empty line, and the text. <code>-</code> reads the text from stdin. Writes the path of the new note.</p>
+<pre><code>omajot new &lt;title&gt; [text|-] [--folder &lt;folder&gt;]</code></pre>
+  <div class="table"><table>
+    <tr><th>Option</th><th>Meaning</th></tr>
+    <tr><td><code>--folder &lt;folder&gt;</code></td><td>Put the note in this folder. omajot makes the folder and its parent folders if necessary.</td></tr>
+  </table></div>
+<pre class="cmd"><code><span class="p">$ </span>omajot new "Groceries" "- milk"
+<span class="p">$ </span>omajot new "Meeting 2026-09-26" --folder Work/Meetings
+<span class="p">$ </span>git log -5 --oneline | omajot new "Release notes" - --folder Work</code></pre>
+</section>
+
+<section id="write">
+  <h3><code>omajot write</code></h3>
+  <p>Makes stdin the full text of a note. omajot applies only the parts that are different, so changes from other devices in other parts of the note stay. When the note does not exist, omajot makes it: in <code>--folder</code>, or in the folder of the path (<code>Work/Todo</code> goes into <code>Work</code>). When the first line of the text is not the title, omajot adds <code># &lt;title&gt;</code> at the top, so that the name finds the note again.</p>
+<pre><code>omajot write &lt;note&gt; [--folder &lt;folder&gt;] &lt; text</code></pre>
+<pre class="cmd"><code><span class="p">$ </span>omajot cat Todo &gt; todo.md; $EDITOR todo.md; omajot write Todo &lt; todo.md
+<span class="p">$ </span>printf '# Status\n\nAll green.\n' | omajot write Work/Status</code></pre>
+</section>
+
+<section id="edit">
+  <h3><code>omajot edit</code></h3>
+  <p>Opens the note in your text editor. Each time you save, omajot applies your changes to the note, also while other devices change it. omajot applies the last save again when the editor closes. The file is in a private temporary directory, which omajot deletes after the editor closes.</p>
+<pre><code>omajot edit &lt;note&gt;</code></pre>
+  <p>The editor: <code>$VISUAL</code>, else <code>$EDITOR</code>, else <code>vi</code>. The value can have arguments, for example <code>code --wait</code> or <code>nvim -u NONE</code>: omajot runs it as <code>sh -c '&lt;editor&gt; "$1"' omajot &lt;file&gt;</code>. A graphical editor must wait until you close the file (<code>code --wait</code>, <code>subl -w</code>, <code>gedit -s</code>). When no editor is set and <code>vi</code> is not installed, the command fails: set <code>$EDITOR</code>.</p>
+<pre class="cmd"><code><span class="p">$ </span>omajot edit Todo
+<span class="p">$ </span>EDITOR="code --wait" omajot edit "Work/Plans/Q3"</code></pre>
+</section>
+
+<section id="append">
+  <h3><code>omajot append</code></h3>
+  <p>Adds the text to the end of the note, on a new line. <code>-</code> reads the text from stdin. omajot adds a line break at the end when the text has none.</p>
+<pre><code>omajot append &lt;note&gt; &lt;text|-&gt;</code></pre>
+<pre class="cmd"><code><span class="p">$ </span>omajot append Groceries "- eggs"
+<span class="p">$ </span>date | omajot append Log -</code></pre>
+</section>
+
+<section id="replace">
+  <h3><code>omajot replace</code></h3>
+  <p>Replaces the text <code>&lt;old&gt;</code> with <code>&lt;new&gt;</code>. <code>&lt;old&gt;</code> must occur exactly one time: when the note does not contain it, exit code 1; when it occurs more than one time, exit code 2 and no change. Add more of the text around <code>&lt;old&gt;</code> to make it unique, or use <code>--all</code>. Case matters. Changes made on other devices at the same time stay.</p>
+<pre><code>omajot replace &lt;note&gt; &lt;old&gt; &lt;new&gt; [--all]</code></pre>
+  <div class="table"><table>
+    <tr><th>Option</th><th>Meaning</th></tr>
+    <tr><td><code>--all</code></td><td>Replace every occurrence.</td></tr>
+  </table></div>
+<pre class="cmd"><code><span class="p">$ </span>omajot replace Todo "- [ ] call Anna" "- [x] call Anna"
+<span class="p">$ </span>omajot replace Notes "2025" "2026" --all</code></pre>
+</section>
+
+<section id="mv">
+  <h3><code>omajot mv</code></h3>
+  <p>Moves the note to the folder. <code>/</code> is the top level. The folder must exist (see <code>omajot mkdir</code>).</p>
+<pre><code>omajot mv &lt;note&gt; &lt;folder&gt;</code></pre>
+<pre class="cmd"><code><span class="p">$ </span>omajot mv Todo Work
+<span class="p">$ </span>omajot mv "Work/Old plan" /</code></pre>
+</section>
+
+<section id="rm">
+  <h3><code>omajot rm</code></h3>
+  <p>Moves the note to the Trash. omajot does not delete notes: you can get them back from the Trash.</p>
+<pre><code>omajot rm &lt;note&gt; [--restore]</code></pre>
+  <div class="table"><table>
+    <tr><th>Option</th><th>Meaning</th></tr>
+    <tr><td><code>--restore</code></td><td>Move the note out of the Trash.</td></tr>
+  </table></div>
+<pre class="cmd"><code><span class="p">$ </span>omajot rm "Old idea"
+<span class="p">$ </span>omajot rm "Old idea" --restore</code></pre>
+</section>
+
+<section id="mkdir">
+  <h3><code>omajot mkdir</code></h3>
+  <p>Makes the folder and its missing parent folders. A folder that exists is not an error.</p>
+<pre><code>omajot mkdir &lt;path&gt;</code></pre>
+<pre class="cmd"><code><span class="p">$ </span>omajot mkdir Work/Meetings/2026</code></pre>
+</section>
+
+<section id="rmdir">
+  <h3><code>omajot rmdir</code></h3>
+  <p>Deletes an empty folder. When the folder has notes or folders, the command stops with exit code 3.</p>
+<pre><code>omajot rmdir &lt;folder&gt; [--force]</code></pre>
+  <div class="table"><table>
+    <tr><th>Option</th><th>Meaning</th></tr>
+    <tr><td><code>--force</code></td><td>Delete the folder all the same. Its notes move to the top level and its folders to the parent folder. No note is deleted.</td></tr>
+  </table></div>
+<pre class="cmd"><code><span class="p">$ </span>omajot rmdir Work/Old</code></pre>
+</section>
+
+<section id="tags">
+  <h3><code>omajot tags</code></h3>
+  <p>Lists the tags (<code>#word</code> in the text) of the notes that are not in the Trash, with the number of notes, the most used first.</p>
+<pre><code>omajot tags</code></pre>
+<pre class="cmd"><code><span class="p">$ </span>omajot tags
+<span class="p">$ </span>omajot ls --tag todo</code></pre>
+</section>
+
+<section id="history">
+  <h3><code>omajot history</code></h3>
+  <p>Lists the versions of a note, the oldest first. A version is a group of changes from one device with less than one minute between them. For each version: the number, the time of its last change, the device, and the number of characters added and removed. Show an old text with <code>omajot cat --at</code>, and make it the current text with <code>omajot restore</code>.</p>
+<pre><code>omajot history &lt;note&gt;</code></pre>
+<pre class="cmd"><code><span class="p">$ </span>omajot history Todo
+<span class="p">$ </span>omajot restore Todo 3</code></pre>
+</section>
+
+<section id="restore">
+  <h3><code>omajot restore</code></h3>
+  <p>Makes the text of an earlier version the current text of the note. omajot applies it as a normal change: it syncs to your other devices, and the history keeps every version, so you can undo the restore. <code>&lt;version&gt;</code> is a number from <code>omajot history</code>; <code>&lt;time&gt;</code> is written as for <code>cat --at</code>.</p>
+<pre><code>omajot restore &lt;note&gt; &lt;version|time&gt;</code></pre>
+<pre class="cmd"><code><span class="p">$ </span>omajot restore Todo 3
+<span class="p">$ </span>omajot restore Todo 2h</code></pre>
+</section>
+
+<section id="export">
+  <h3><code>omajot export</code></h3>
+  <p>Writes every note as a Markdown file: <code>&lt;dir&gt;/Folder/Subfolder/Title.md</code>. Attachments go to <code>&lt;dir&gt;/attachments/</code>, and the links in the notes still work. <code>&lt;dir&gt;/README.md</code> tells what the files are. The export is a copy: changes to the files do not go back into omajot. omajot changes characters that file names cannot have to <code>-</code>. Notes with the same title get <code> (2)</code>, <code> (3)</code>, … at the end of the name.</p>
+<pre><code>omajot export &lt;dir&gt; [--trash] [--force]</code></pre>
+  <div class="table"><table>
+    <tr><th>Option</th><th>Meaning</th></tr>
+    <tr><td><code>--trash</code></td><td>Also write the notes in the Trash, to <code>&lt;dir&gt;/Trash/</code>.</td></tr>
+    <tr><td><code>--force</code></td><td>Write into a directory that is not empty.</td></tr>
+  </table></div>
+<pre class="cmd"><code><span class="p">$ </span>omajot export ~/notes-backup</code></pre>
+</section>
+
+<section id="status">
+  <h3><code>omajot status</code></h3>
+  <p>Shows the daemon (version, how it started), the data directory, the socket, the hub, and the sync state: online, connecting or offline, and the number of changes that the hub did not get yet.</p>
+<pre><code>omajot status</code></pre>
+<pre class="cmd"><code><span class="p">$ </span>omajot status
+<span class="p">$ </span>omajot status --no-start</code></pre>
+</section>
+
+<section id="json">
+  <h2>JSON output and exit codes</h2>
+  <p>With <code>--json</code>, every command writes one JSON object to stdout. Scripts and AI agents use it. <a href="https://github.com/renerocksai/omajot/blob/main/SKILL.md">SKILL.md</a> shows every shape; the most used:</p>
+<pre><code><span class="c"># omajot ls -r --json</span>
+{"ok":true,"folder":null,"folders":[],"notes":[{"id":"n-…","title":"Todo","path":"Work/Todo",
+  "folder":"f-…","tags":["work"],"pinned":false,"trashed":false,"created":1790000000000,
+  "updated":1790000100000,"snippet":"- call Anna"}]}
+<span class="c"># omajot cat Todo --json</span>
+{"ok":true,"id":"n-…","path":"Work/Todo","text":"# Todo\n\n- call Anna\n","at":null}
+<span class="c"># omajot write / append / replace / new / mv / rm --json</span>
+{"ok":true,"id":"n-…","path":"Work/Todo","changed":true,"action":"updated"}
+<span class="c"># a failure, here an ambiguous name (exit code 2)</span>
+{"ok":false,"exit":2,"error":"ambiguous","candidates":[{"id":"n-…","path":"Work/Todo","trashed":false},…]}</code></pre>
+  <div class="table"><table>
+    <tr><th>Exit code</th><th>Meaning</th></tr>
+    <tr><td><code>0</code></td><td>Done.</td></tr>
+    <tr><td><code>1</code></td><td>Not found: the note, the folder, the text for <code>replace</code>, or no match for <code>search</code>.</td></tr>
+    <tr><td><code>2</code></td><td>Ambiguous: the name matches more than one note or folder, or <code>replace</code> found the text more than one time.</td></tr>
+    <tr><td><code>3</code></td><td>Conflict: <code>rmdir</code> of a folder that is not empty, <code>export</code> into a directory that is not empty, or a note that another program has open for editing.</td></tr>
+    <tr><td><code>64</code></td><td>Usage: a missing or wrong argument.</td></tr>
+    <tr><td><code>69</code></td><td>No daemon: none runs and none could start (or <code>--no-start</code>).</td></tr>
+    <tr><td><code>70</code></td><td>Another error.</td></tr>
+  </table></div>
+</section>
 
 <section id="hub">
   <h2><code>omajot hub</code></h2>
@@ -29,13 +256,17 @@
 
 <section id="daemon">
   <h2><code>omajot daemon</code></h2>
-  <p>The plugin runs the daemon for you. The daemon keeps the local copy of your notes, syncs it with the hub, and handles paste. It speaks JSON lines on stdin and stdout, so you can also use it from scripts.</p>
-<pre><code>omajot daemon [--hub &lt;url&gt; | --no-hub] [--data &lt;dir&gt;]</code></pre>
+  <p>The plugin runs the daemon for you, and the note commands start one when none runs. The daemon keeps the local copy of your notes, syncs it with the hub, and handles paste. It speaks JSON lines on stdin and stdout (for the plugin) and on a unix socket (for the note commands), so you can also use it from scripts.</p>
+<pre><code>omajot daemon [--hub &lt;url&gt; | --no-hub] [--data &lt;dir&gt;] [--socket &lt;path&gt;]
+              [--background [--idle-exit &lt;seconds&gt;]]</code></pre>
   <div class="table"><table>
     <tr><th>Flag</th><th>Default</th><th>Meaning</th></tr>
     <tr><td><code>--hub</code></td><td><code>hub</code> in the config file</td><td>The hub URL. Without a hub, the daemon keeps your notes on this computer only.</td></tr>
     <tr><td><code>--no-hub</code></td><td>off</td><td>Do not sync, also when the config file names a hub.</td></tr>
     <tr><td><code>--data</code></td><td><code>data</code> in the config file, else <code>~/.local/share/omajot</code></td><td>The local copy: the log of all changes, the queue of unsent changes, and <code>attachments/</code>.</td></tr>
+    <tr><td><code>--socket</code></td><td><code>socket</code> in the config file, else <code>$XDG_RUNTIME_DIR/omajot.sock</code></td><td>The socket for the note commands, readable only by you. Other data folders get <code>omajot-&lt;hash&gt;.sock</code>; without <code>$XDG_RUNTIME_DIR</code> (macOS) the socket is <code>&lt;data&gt;/daemon.sock</code>. <code>--socket ""</code> turns it off.</td></tr>
+    <tr><td><code>--background</code></td><td>off</td><td>Do not read stdin. The note commands start the daemon like this. A plugin daemon that starts later takes over the data folder.</td></tr>
+    <tr><td><code>--idle-exit</code></td><td><code>600</code></td><td>With <code>--background</code>: stop after this many seconds without note commands (once the hub has all changes). <code>0</code>: never.</td></tr>
   </table></div>
   <p>An example session:</p>
 <pre><code><span class="p">$ </span>omajot daemon --no-hub --data /tmp/notes
@@ -47,7 +278,7 @@
 <span class="c">{"re":2,"ok":true,"ids":["n-c48c3ae4cbe96ad4-1"]}</span></code></pre>
   <p>Each request gets one reply (<code>"re"</code>). Events (<code>"ev"</code>) can come at any time.</p>
   <p><a href="https://github.com/renerocksai/omajot/blob/main/docs/PROTOCOL.md">docs/PROTOCOL.md</a> lists all commands and events. The plugin and the web app use the same commands.</p>
-  <div class="note"><p>Run only one daemon for one data folder. Two daemons on the same folder can overwrite each other's files.</p></div>
+  <div class="note"><p>Only one daemon can use a data folder: it locks <code>&lt;data&gt;/daemon.lock</code>. A second daemon on the same folder stops with exit code 3. Use the socket to reach the daemon that runs.</p></div>
 </section>
 
 <section id="qr">
@@ -67,11 +298,12 @@
   <p><code>~/.config/omajot/config.json</code> (or <code>$XDG_CONFIG_HOME/omajot/config.json</code>). All fields are optional.</p>
 <pre><code>{
   "hub": "https://your-mac.your-tailnet.ts.net:8443",
-  "data": "~/.local/share/omajot"
+  "data": "~/.local/share/omajot",
+  "socket": "/run/user/1000/omajot.sock"
 }</code></pre>
   <p>omajot uses the first value it finds:</p>
   <ol>
-    <li>the command-line flag (<code>--hub</code>, <code>--data</code>),</li>
+    <li>the command-line flag (<code>--hub</code>, <code>--data</code>, <code>--socket</code>),</li>
     <li>the plugin setting (<code>hubUrl</code>, <code>dataDir</code>), when it is not empty,</li>
     <li>the config file,</li>
     <li>the default: no hub, and <code>~/.local/share/omajot</code> for the data.</li>

@@ -4,13 +4,14 @@ The three interfaces every part of omajot is built against. Change them here
 first, then in code. Design rationale lives in [DESIGN.md](../DESIGN.md).
 
 ```
- QML plugin ──JSON lines (stdio)──▶ omajot daemon ─┐
-                                     └ core Engine  │  §2 hub HTTP API
- PWA (JS) ────omj_call (wasm)─────▶ core.wasm      ├──────────────▶ omajot hub (baz)
-                                     └ core Engine  │
-                                                    ┘
- §1 client protocol: identical for QML↔daemon and JS↔wasm
+ QML plugin ──JSON lines (stdio)───▶ omajot daemon ─┐
+ omajot ls/cat/edit… ─(unix socket)─▶ └ core Engine  │  §2 hub HTTP API
+ PWA (JS) ────omj_call (wasm)──────▶ core.wasm      ├──────────────▶ omajot hub (baz)
+                                      └ core Engine  │
+                                                     ┘
+ §1 client protocol: identical for QML↔daemon, commands↔daemon and JS↔wasm
  §3 Engine Zig API: what the daemon and the wasm shell call
+ §5 the omajot commands (CLI)
 ```
 
 ## Conventions
@@ -26,7 +27,8 @@ first, then in code. Design rationale lives in [DESIGN.md](../DESIGN.md).
 
 ## 1. Client protocol (UI ↔ engine)
 
-Used verbatim over the daemon's stdin/stdout (one JSON object per line) and
+Used verbatim over the daemon's stdin/stdout (one JSON object per line), over
+the daemon's unix socket (same lines; see "The daemon socket" below), and
 through `omj_call` in the browser (request in, reply + event lines out).
 
 Every request carries an integer `id` and a `cmd`. Every request gets exactly
@@ -55,10 +57,12 @@ covers ASCII and Latin-1. `updated` changes on text edits only (not on pin, move
 
 | cmd | fields | reply fields |
 |---|---|---|
-| `hello` | `client`: `"qml"` \| `"web"` | `replica`, `version`; the daemon adds `data`, `attachments` (absolute path with trailing `/`, the QML preview's `baseUrl`), `hub`, `daemon` |
+| `hello` | `client`: `"qml"` \| `"web"` \| `"cli"` \| `"tui"`; `events` (socket only, optional, default false: receive the broadcast events) | `replica`, `version`; the daemon adds `data`, `attachments` (absolute path with trailing `/`, the QML preview's `baseUrl`), `hub`, `daemon`, `socket` (`""`: none), `mode` (`"plugin"` \| `"background"`) |
 | `list` | – | `notes: [NoteSummary]` (incl. trashed), `folders: [Folder]` |
 | `open` | `note` | `text`, `seq` (last applied client edit seq for this note, initially 0), `pseq` (last patch seq, initially 0) |
 | `close` | `note` | – |
+| `read` | `note`; `at` (optional, ms: the text at that time, **daemon only**, rebuilt from `ops.jsonl`) | `text`. Opens no session. With `at`: error `the note did not exist at that time` |
+| `put` | `note`, `text`, `base` (optional) | `changed: bool`. Makes `text` the note's full text, applied as the smallest edits (`src/core/diff.zig`: lines, then characters). With `base` (the text the writer started from): a three-way merge, so changes made since `base` elsewhere stay (`ot.xform(diff(base,text), diff(base,current))`). An open session gets the edits as `patch` events. Used by the commands, never by the plugin |
 | `edit` | `note`, `seq`, `pos`, `del`, `ins`, `ack` (optional: last `pseq` the client applied) | – |
 | `create` | `folder` (nullable), `text` (optional, default `""`), `created` + `updated` (optional, import only: ms, `0 < created ≤ updated ≤ now`) | `note` |
 | `set` | `note` + any of `folder`, `pinned`, `trashed` | – |
@@ -71,9 +75,16 @@ covers ASCII and Latin-1. `updated` changes on text edits only (not on pin, move
 | `qr` | `text` (≤ 213 bytes) | `size`, `rows: ["0101…"]` (1 = dark module, no quiet zone): a QR code, byte mode, level M, versions 1–10; `footer`: the Tailscale note to show under it. Used for "open on your phone" |
 | `invite` | – | `title`, `steps: [..]`, `footer`: how to run a hub and reach it with Tailscale (shown when no hub is configured). One source: `src/core/invite.zig` |
 | `attach` | `path` (a local file) | `name` (`attachments/<sha256>.<ext>`). **Daemon only**: copies the file into the attachments and queues its upload |
-| `status` | – | `sync`: `"online"`\|`"connecting"`\|`"offline"`, `hub`, `pending` (unsent batches), `head`. **Answered by the shell** (daemon / PWA); the engine only returns offline placeholders |
+| `status` | – | `sync`: `"online"`\|`"connecting"`\|`"offline"`, `hub`, `pending` (unsent batches), `head`. **Answered by the shell** (daemon / PWA); the engine only returns offline placeholders. The daemon adds `replica`, `data`, `socket`, `mode`, `daemon` (version) |
+| `history` | `note` | `note`, `versions: [Version]`, oldest first. **Daemon only**, from `ops.jsonl` (`src/core/history.zig`). `Version = {"t_first": ms, "t_last": ms, "replica": "<hex16>", "self": bool, "inserted": n, "deleted": n, "created": bool, "other": n}`: the ops of one replica with less than 60 s between them; `inserted`/`deleted` count UTF-16 units, `other` counts folder/pin/trash changes. Times are hybrid logical times (≈ wall clock) |
+| `restore` | `note`, `at` (ms) | `changed`. **Daemon only**: the text at `at` (as `read` with `at`), applied as a `put` without base: an ordinary edit that syncs and has its own history |
+| `daemon.exit` | – | – . **Daemon only**: a `background` daemon replies, then exits (a plugin daemon that needs the data directory sends it). A plugin daemon refuses |
 
-**Editing.** A client may have several notes open. For each open note it numbers
+**Editing.** A client may have several notes open. The engine keeps one editing
+session per note, so on the daemon only one client can have a note open: an
+`open`/`edit` from a second client fails with `note is open in another omajot
+client` (its `close` is a no-op). Clients that only need to change a note use
+`put` with `base`, which needs no session. For each open note it numbers
 its own edits `seq = 1, 2, 3 …` and sends every change as
 `{"cmd":"edit","note":…,"seq":k,"ack":a,"pos":p,"del":d,"ins":"…"}` against its
 current text, where `ack` is the last patch `pseq` it has applied. An edit with
@@ -102,6 +113,18 @@ JS ports mirror exactly):
 | `sync` | `state` (`online`, `connecting`, `offline`, `conflict`), `pending`, `head` | Sync state changed (emitted by the daemon / PWA shell, not the engine). `conflict`: a 409 on push or a hub head behind the local cursor |
 | `attachment` | `name` | A missing attachment finished downloading (daemon); re-render previews that use it |
 | `error` | `error` | Something failed outside a request. Also emitted on a sync conflict (409 on push, or a hub head behind the local cursor); local edits are always kept |
+
+**The daemon socket.** The daemon also serves this protocol on a unix socket
+(mode 0600, at most 32 clients, request lines up to 16 MiB). Each connection is
+one client. Replies go to the client that sent the request. `patch` events go to
+the client that opened the note. All other events (`notes`, `folders`, `sync`,
+`attachment`, `error`) go to the plugin on stdio and to socket clients that sent
+`hello` with `"events": true`. When a socket client disconnects, the daemon
+closes the notes it had open. Path: `--socket`, else `"socket"` in the config,
+else `$XDG_RUNTIME_DIR/omajot.sock` for the default data directory,
+`$XDG_RUNTIME_DIR/omajot-<hash>.sock` for other data directories, and
+`<data>/daemon.sock` without `XDG_RUNTIME_DIR` (macOS; `$TMPDIR/omajot-<hash>.sock`
+when that path is too long for a socket). `--socket ""` turns it off.
 
 An edit or patch is a delete followed by an insert at the same `pos`; transform
 them as primitive pairs. An insert inside a range deleted concurrently survives at
@@ -192,11 +215,40 @@ result = pointer to [u32 LE length][bytes]; 0 = out of memory
 
 | | |
 |---|---|
-| Binary | one `omajot` executable: `omajot hub …`, `omajot daemon …`, `omajot qr [url]` (URL + terminal QR code; default: the configured hub) |
+| Binary | one `omajot` executable: `omajot hub …`, `omajot daemon …`, `omajot qr [url]` (URL + terminal QR code; default: the configured hub), and the note commands of §5 |
 | Hub | `omajot hub --port 8787 --data <dir> --login <tailscale login> [--web <dir>] [--bind 127.0.0.1] [--timeout-ms N] [--url <public url>] [--no-auth (loopback only)]`; prints its phone URL and QR code at startup (`--url`, else found in `tailscale serve status`); data: `<dir>/batches.jsonl`, `<dir>/blobs/`. Request bodies are capped at 1 MiB because bounded/http reserves and touches 2 × `max_body` per connection at startup (16 MiB cost ~800 MB RSS) |
-| Config | `$XDG_CONFIG_HOME/omajot/config.json` (`~/.config/omajot/config.json`), all fields optional: `{"hub": "<url>", "data": "<dir, ~/ allowed>"}`. Precedence: command-line flag, then config, then built-in default. The plugin passes `--hub` only when its `hubUrl` setting is non-empty |
+| Config | `$XDG_CONFIG_HOME/omajot/config.json` (`~/.config/omajot/config.json`), all fields optional: `{"hub": "<url>", "data": "<dir, ~/ allowed>", "socket": "<path>"}`. Precedence: command-line flag, then config, then built-in default. The plugin passes `--hub` only when its `hubUrl` setting is non-empty |
 | Import | `tools/import_joplin.py`: Joplin profile → omajot through a daemon (folders, created/updated times, `# Title` first line, tags → `#hashtags`, resources → attachments); rerunnable via `<data>/import-joplin.json` |
-| Daemon | `omajot daemon [--hub <url> \| --no-hub] [--data <dir>]`, data default `$XDG_DATA_HOME/omajot` (`~/.local/share/omajot`): `replica.json` (id, cursor, next bseq), `ops.jsonl` (every ingested or local ops array, one per line, replayed on start), `outbox.jsonl`, `attachments/` |
+| Daemon | `omajot daemon [--hub <url> \| --no-hub] [--data <dir>] [--socket <path>] [--background [--idle-exit <s>]]`, data default `$XDG_DATA_HOME/omajot` (`~/.local/share/omajot`): `replica.json` (id, cursor, next bseq), `ops.jsonl` (every ingested or local ops array, one per line, replayed on start), `outbox.jsonl`, `attachments/`, `daemon.lock`, `daemon.log` (stderr of a background daemon). Serves §1 on stdio and on the socket (§1 "The daemon socket"). **One daemon per data directory**: it takes an exclusive lock on `daemon.lock` (`{"pid","socket","mode"}` inside) and a second daemon exits with code 3. **Plugin mode** (default): reads stdin, exits when stdin closes. **Background mode** (`--background`, started by the commands): no stdin; exits after `--idle-exit` seconds (default 600, 0 = never) without socket clients once its outbox reached the hub (or the hub is unreachable). A plugin daemon that finds a background daemon's lock sends it `daemon.exit` on its socket and waits up to 5 s for the lock, so the plugin always gets the data directory |
 | Plugin | repo root: `manifest.json` (id `io.github.renerocksai.omajot`), `Service.qml`, `BarWidget.qml`, `Panel.qml`, `qml/…`. Finds the daemon at `<plugin>/bin/omajot`, else `<plugin>/zig-out/bin/omajot`. Settings: `hubUrl` |
 | PWA | sources in `web/`, built into `web/dist/` (committed, so `zig build` needs no node). Replica in IndexedDB |
 | Default hub URL | `https://your-mac.your-tailnet.ts.net:8443` |
+
+## 5. The omajot commands (CLI)
+
+`omajot ls | cat | search | new | write | edit | append | replace | mv | rm |
+mkdir | rmdir | tags | history | restore | export | status` (`src/cli/`). Each
+has `--help` (the texts live in `src/cli/help.zig`; [SKILL.md](../SKILL.md) and
+`site/pages/cli.html` repeat them, with the `--json` shapes).
+
+- **Connection**: the socket of the data directory (flags `--data`, `--socket`,
+  else the config, else the defaults of §4). No daemon: the command starts
+  `omajot daemon --background` with the same data directory and socket (stderr to
+  `<data>/daemon.log`, own process group) and waits up to 10 s. `--no-start`
+  fails instead. The command checks that the daemon's `data` is its data directory.
+- **Addresses**: `Folder/Sub/Title` (title = first line without `# `), `Title`, or
+  the exact id. Lookup order: id, exact path, exact title, then both without case;
+  a note in the Trash counts only when no live note matches (`src/core/address.zig`).
+- **Writes** go through `put`: `write` without `base` (stdin becomes the text,
+  applied as a diff), `append`/`replace` with `base` = the text read. `edit` puts
+  every save with `base` = the previous save, so concurrent edits merge; the
+  editor is `$VISUAL`, else `$EDITOR`, else `vi`, run as `sh -c '<editor> "$1"'`
+  (`src/cli/editor.zig`, shared with the TUI).
+- **Exit codes**: 0 done, 1 not found (note, folder, text for `replace`, no
+  `search` match), 2 ambiguous (address, or `replace` text found more than once
+  without `--all`), 3 conflict (`rmdir` of a non-empty folder, `export` into a
+  non-empty directory, note open in another client), 64 usage, 69 no daemon,
+  70 other error.
+- **`--json`**: one JSON object on stdout. Success: `"ok": true` plus the result;
+  failure: `{"ok": false, "exit": <code>, "error": "<text>"}`, and for exit 2
+  also `"candidates": [{"id","path","trashed"}]`.

@@ -203,11 +203,43 @@ again: it skips notes that it imported before.
 
 ## Command line
 
+Your notes are also in the terminal. The commands use the daemon of your data
+folder (the plugin's, or one that they start in the background), and your
+changes sync like changes in the plugin. Changes merge: `write`, `edit`,
+`append` and `replace` apply only what is different, so an edit on your phone
+at the same time stays.
+
 | Command | What it does |
 |---|---|
+| `omajot ls [folder] [-r] [-l] [--tag <t>] [--trash]` | Lists notes and folders. |
+| `omajot cat <note> [--at <time>]` | Writes the text of a note to stdout, also as it was at a time. |
+| `omajot search <text>` | Finds the notes that contain a text. |
+| `omajot new <title> [text\|-] [--folder <f>]` | Makes a note. |
+| `omajot write <note> < file` | Makes stdin the text of a note (makes the note when necessary). |
+| `omajot edit <note>` | Opens the note in `$VISUAL`/`$EDITOR`; every save goes into the note. |
+| `omajot append <note> <text\|->` | Adds text to the end of a note. |
+| `omajot replace <note> <old> <new> [--all]` | Replaces a text that occurs exactly one time (or `--all`). |
+| `omajot mv <note> <folder>`, `omajot rm <note> [--restore]` | Moves a note, or moves it to the Trash and back. |
+| `omajot mkdir <path>`, `omajot rmdir <folder>` | Makes or deletes a folder. |
+| `omajot tags` | Lists the tags and how many notes use them. |
+| `omajot history <note>`, `omajot restore <note> <version\|time>` | Lists the versions of a note; makes an earlier one the current text. |
+| `omajot export <dir>` | Writes every note as `Folder/Title.md`, with its attachments. |
+| `omajot status` | Shows the daemon, the data folder and the sync state. |
 | `omajot hub --login <you> [--port 8787] [--data <dir>] [--url <url>]` | Runs the hub. Prints its phone URL and a QR code at start. |
-| `omajot daemon [--hub <url> \| --no-hub] [--data <dir>]` | The local copy that the plugin uses. Speaks JSON lines on stdin and stdout. |
+| `omajot daemon [--hub <url> \| --no-hub] [--data <dir>] [--socket <path>]` | The local copy that the plugin and the commands use. |
 | `omajot qr [url]` | Prints a URL (default: your hub) as a QR code in the terminal. |
+
+Address a note as `Folder/Title` (the title is the first line), `Title`, or its
+id. Every command has `--help` with examples, and `--json` for scripts. Exit
+codes: 0 done, 1 not found, 2 ambiguous, 3 conflict, 64 usage, 69 no daemon,
+70 other error. For AI agents: [SKILL.md](SKILL.md).
+
+```sh
+omajot new "Groceries" "- milk" --folder Home
+omajot append Home/Groceries "- eggs"
+omajot edit Home/Groceries
+omajot ls -r --json | jq -r '.notes[].path'
+```
 
 Command-line flags come first, then `~/.config/omajot/config.json`, then the
 defaults. See the [CLI reference](https://renerocksai.github.io/omajot/cli.html).

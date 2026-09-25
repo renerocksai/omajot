@@ -1,16 +1,12 @@
-//! omajot: `omajot hub …` (the central baz server) or `omajot daemon …`
-//! (the desktop replica behind the Omarchy plugin). See docs/PROTOCOL.md §4.
+//! omajot: `omajot hub …` (the central baz server), `omajot daemon …` (the
+//! desktop replica behind the Omarchy plugin and the commands), and the note
+//! commands (`omajot ls`, `cat`, `edit`, …; src/cli). See docs/PROTOCOL.md.
 const std = @import("std");
 const hub = @import("hub/hub.zig");
 const daemon = @import("daemon/daemon.zig");
 const qrcli = @import("qrcli.zig");
-
-const usage =
-    \\usage: omajot hub --port 8787 --data <dir> --login <tailscale login> [--web <dir>]
-    \\       omajot daemon --hub <url> [--data <dir>]
-    \\       omajot qr [url]    (the hub URL as a QR code for your phone)
-    \\
-;
+const cli = @import("cli/cli.zig");
+const help = @import("cli/help.zig");
 
 pub fn main(init: std.process.Init) !void {
     var it = try init.minimal.args.iterateAllocator(init.gpa);
@@ -21,20 +17,32 @@ pub fn main(init: std.process.Init) !void {
     defer args.deinit(init.gpa);
     while (it.next()) |arg| try args.append(init.gpa, arg);
 
+    const eql = std.mem.eql;
     if (args.items.len == 0) {
-        std.debug.print("{s}", .{usage});
-        std.process.exit(2);
+        std.debug.print("{s}", .{help.overview});
+        std.process.exit(cli.exit.usage);
     }
+    const first = args.items[0];
     const rest = args.items[1..];
-    if (std.mem.eql(u8, args.items[0], "hub")) return hub.main(init, rest);
-    if (std.mem.eql(u8, args.items[0], "daemon")) return daemon.main(init, rest);
-    if (std.mem.eql(u8, args.items[0], "qr")) return qrcli.main(init, rest);
-    std.debug.print("{s}", .{usage});
-    std.process.exit(2);
+    if (eql(u8, first, "-h") or eql(u8, first, "--help") or eql(u8, first, "help")) {
+        if (rest.len == 1 and cli.isVerb(rest[0])) return cli.main(init, rest[0], &.{"--help"});
+        var buf: [8192]u8 = undefined;
+        var out = std.Io.File.stdout().writer(init.io, &buf);
+        try out.interface.writeAll(help.overview);
+        try out.interface.flush();
+        return;
+    }
+    if (eql(u8, first, "hub")) return hub.main(init, rest);
+    if (eql(u8, first, "daemon")) return daemon.main(init, rest);
+    if (eql(u8, first, "qr")) return qrcli.main(init, rest);
+    if (cli.isVerb(first)) return cli.main(init, first, rest);
+    std.debug.print("omajot: unknown command \"{s}\"\n\n{s}", .{ first, help.overview });
+    std.process.exit(cli.exit.usage);
 }
 
 test {
     _ = hub;
     _ = daemon;
     _ = qrcli;
+    _ = cli;
 }

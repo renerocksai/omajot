@@ -3,3 +3,4 @@ zig-out/
 zig-pkg/
 *.log
 node_modules/
+__pycache__/

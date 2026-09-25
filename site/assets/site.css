@@ -1,4 +1,4 @@
-/* omajot site: warm paper and Notes yellow in light, neutral graphite in dark. */
+/* omajot site: warm paper and Notes yellow in light, cool blue-grey in dark. */
 :root {
   --paper: #fbf8f1; --paper-2: #f3eee2; --card: #ffffff; --ink: #1f1d1a; --muted: #6a6358;
   --line: #e4ddcd; --accent: #f5c518; --accent-deep: #d69e00; --accent-ink: #8a6400;
@@ -11,17 +11,17 @@
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --paper: #111113; --paper-2: #1a1a1d; --card: #1f1f23; --ink: #f2f2f5; --muted: #9d9da6;
-    --line: #2e2e34; --accent: #f5c518; --accent-deep: #c99400; --accent-ink: #f5c518;
-    --code-bg: #18181b; --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 12px 32px rgba(0, 0, 0, .35); color-scheme: dark;
-    --tint: 3%;
+    --paper: #0d1117; --paper-2: #151b23; --card: #161c24; --ink: #eef2f6; --muted: #98a3b1;
+    --line: #28313c; --accent: #f5c518; --accent-deep: #c99400; --accent-ink: #f5c518;
+    --code-bg: #121820; --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 12px 32px rgba(0, 0, 0, .35); color-scheme: dark;
+    --tint: 0%;
   }
 }
 :root[data-theme="dark"] {
-  --paper: #111113; --paper-2: #1a1a1d; --card: #1f1f23; --ink: #f2f2f5; --muted: #9d9da6;
-  --line: #2e2e34; --accent: #f5c518; --accent-deep: #c99400; --accent-ink: #f5c518;
-  --code-bg: #18181b; --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 12px 32px rgba(0, 0, 0, .35); color-scheme: dark;
-  --tint: 3%;
+  --paper: #0d1117; --paper-2: #151b23; --card: #161c24; --ink: #eef2f6; --muted: #98a3b1;
+  --line: #28313c; --accent: #f5c518; --accent-deep: #c99400; --accent-ink: #f5c518;
+  --code-bg: #121820; --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 12px 32px rgba(0, 0, 0, .35); color-scheme: dark;
+  --tint: 0%;
 }
 
 * { box-sizing: border-box }
@@ -106,7 +106,7 @@ pre .p { color: var(--accent-ink); user-select: none }
 .copy:hover { color: var(--ink) }
 
 /* the terminal QR: real text, black on white like `omajot qr` prints it */
-.terminal { background: #18181b; color: #e8e8ec; border-radius: 16px; padding: 18px 20px 22px; box-shadow: var(--shadow); max-width: 480px; margin: 0 auto }
+.terminal { background: #121820; color: #e6ebf1; border-radius: 16px; padding: 18px 20px 22px; box-shadow: var(--shadow); max-width: 480px; margin: 0 auto }
 .terminal .bar { display: flex; gap: 7px; margin-bottom: 12px }
 .terminal .bar i { width: 11px; height: 11px; border-radius: 50%; background: #ff5f57 }
 .terminal .bar i:nth-child(2) { background: #febc2e } .terminal .bar i:nth-child(3) { background: #28c840 }

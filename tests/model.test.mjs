@@ -23,6 +23,11 @@ test("data directory honours the setting, then XDG, then ~/.local/share", () => 
 test("daemon argv carries hub and data dir", () => {
   assert.deepEqual(M.daemonArgv("/p/omajot", "x", "/d"),
     ["/p/omajot", "daemon", "--hub", M.DEFAULT_HUB_URL, "--data", "/d"])
+  // Empty: the daemon reads ~/.config/omajot/config.json instead.
+  assert.deepEqual(M.daemonArgv("/p/omajot", "", "/d"), ["/p/omajot", "daemon", "--data", "/d"])
+  assert.deepEqual(M.daemonArgv("/p/omajot", "  ", "/d"), ["/p/omajot", "daemon", "--data", "/d"])
+  assert.deepEqual(M.daemonArgv("/p/omajot", "https://h.ts.net:8443", "/d"),
+    ["/p/omajot", "daemon", "--hub", "https://h.ts.net:8443", "--data", "/d"])
 })
 
 test("restart delay backs off and caps", () => {
@@ -362,6 +367,8 @@ test("manifest defaults survive the model's normalisation", () => {
   const manifest = JSON.parse(readFileSync(new URL("../manifest.json", import.meta.url)))
   assert.equal(manifest.id, M.PLUGIN_ID)
   const defaults = manifest.barWidget.defaults
-  assert.equal(M.normalizeHubUrl(defaults.hubUrl), defaults.hubUrl)
+  // Empty means "let the daemon read ~/.config/omajot/config.json": no --hub at all.
+  assert.equal(defaults.hubUrl, "")
+  assert.ok(!M.daemonArgv("/b", defaults.hubUrl, "/d").includes("--hub"))
   for (const entry of manifest.barWidget.schema) assert.ok(entry.key in defaults, entry.key)
 })

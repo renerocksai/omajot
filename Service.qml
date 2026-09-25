@@ -18,7 +18,7 @@ Item {
 
   // --- configuration (pushed by the bar widget, which owns the settings) ----
 
-  property string hubUrl: Model.DEFAULT_HUB_URL
+  property string hubUrl: ""
   property string dataDirSetting: ""
   property string daemonSetting: ""
   property bool configured: false
@@ -37,7 +37,8 @@ Item {
   }
 
   function configure(hub, dataDirValue, daemonPath) {
-    var nextHub = Model.normalizeHubUrl(hub)
+    // Empty stays empty: the daemon then reads ~/.config/omajot/config.json.
+    var nextHub = String(hub || "").trim() === "" ? "" : Model.normalizeHubUrl(hub)
     var nextData = String(dataDirValue || "")
     var nextDaemon = String(daemonPath || "")
     var changed = !configured || nextHub !== hubUrl || nextData !== dataDirSetting

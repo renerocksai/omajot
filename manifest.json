@@ -23,7 +23,7 @@
     "allowMultiple": false,
     "defaultSection": "center",
     "defaults": {
-      "hubUrl": "https://your-mac.your-tailnet.ts.net:8443",
+      "hubUrl": "",
       "dataDir": "",
       "previewMode": "split",
       "fontSize": 0,
@@ -34,8 +34,8 @@
         "key": "hubUrl",
         "type": "string",
         "label": "Hub URL",
-        "defaultValue": "https://your-mac.your-tailnet.ts.net:8443",
-        "description": "Your omajot hub, published on the tailnet with tailscale serve."
+        "defaultValue": "",
+        "description": "Your omajot hub, published on the tailnet with tailscale serve. Leave empty to use \"hub\" from ~/.config/omajot/config.json."
       },
       {
         "key": "dataDir",

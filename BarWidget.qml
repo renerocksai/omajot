@@ -15,7 +15,8 @@ BarWidget {
   readonly property var service: bar && bar.shell
     ? bar.shell.firstPartyServiceFor(Model.PLUGIN_ID) : null
 
-  readonly property string hubUrl: Model.normalizeHubUrl(setting("hubUrl", Model.DEFAULT_HUB_URL))
+  // Empty: the daemon reads "hub" from ~/.config/omajot/config.json (Service normalizes the rest).
+  readonly property string hubUrl: String(setting("hubUrl", "") || "")
   readonly property string dataDir: String(setting("dataDir", ""))
   readonly property string daemonPath: String(setting("daemonPath", ""))
   readonly property string previewMode: {

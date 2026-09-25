@@ -79,8 +79,13 @@ export function directoryUrl(path) {
   return "file://" + encodeURI(clean) + "/"
 }
 
+// An empty hub setting passes no --hub, so the daemon uses "hub" from
+// ~/.config/omajot/config.json, else its built-in default.
 export function daemonArgv(binary, hubUrl, dataDir) {
-  return [String(binary), "daemon", "--hub", normalizeHubUrl(hubUrl), "--data", String(dataDir)]
+  const argv = [String(binary), "daemon"]
+  if (String(hubUrl || "").trim() !== "") argv.push("--hub", normalizeHubUrl(hubUrl))
+  argv.push("--data", String(dataDir))
+  return argv
 }
 
 export function restartDelay(attempt) {

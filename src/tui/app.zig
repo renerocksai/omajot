@@ -946,6 +946,23 @@ pub const App = struct {
         };
     }
 
+    /// Text styled without a background would show the terminal's own
+    /// background colour, which need not match the theme: give those cells
+    /// the panel's colour.
+    fn fillDefaultBg(app: *App, win: vaxis.Window, bg: [3]u8) void {
+        if (app.theme.mono) return;
+        var row: u16 = 0;
+        while (row < win.height) : (row += 1) {
+            var col: u16 = 0;
+            while (col < win.width) : (col += 1) {
+                var cell = win.readCell(col, row) orelse continue;
+                if (cell.style.bg != .default) continue;
+                cell.style.bg = .{ .rgb = bg };
+                win.writeCell(col, row, cell);
+            }
+        }
+    }
+
     pub fn draw(app: *App, fa: Allocator) !void {
         const t = app.theme;
         const win = app.vx.window();
@@ -965,6 +982,7 @@ pub const App = struct {
             const sw: u16 = if (wide) 30 else if (medium) 34 else w;
             const inner = app.panel(body, x, sw, body_h, " omajot ", app.focus == .sources, t.bg_side);
             try app.drawSources(inner, fa);
+            app.fillDefaultBg(inner, t.bg_side);
             x += sw;
         }
         if (wide or (medium and app.focus != .sources) or (!wide and !medium and app.focus == .notes)) {
@@ -973,11 +991,13 @@ pub const App = struct {
             const label = try std.fmt.allocPrint(fa, " {s}{s} · {d} ", .{ if (src.kind == .tag) "#" else "", src.label, app.visible.len });
             const inner = app.panel(body, x, lw, body_h, label, app.focus == .notes, t.bg);
             try app.drawNotes(inner, fa);
+            app.fillDefaultBg(inner, t.bg);
             x += lw;
         }
         if (x < w and (wide or medium or app.focus == .preview)) {
             const inner = app.panel(body, x, w - x, body_h, " preview ", app.focus == .preview, t.bg);
             try app.drawPreview(inner, fa);
+            app.fillDefaultBg(inner, t.bg);
         }
 
         switch (app.mode) {

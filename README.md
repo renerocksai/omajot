@@ -67,6 +67,8 @@ to Home Screen*. The phone needs Tailscale.
   become attachments. HTML becomes markdown.
 - **In your bar.** A dropdown and a main window, both with three columns and full
   keyboard control.
+- **In your terminal.** `omajot tui` shows the same three columns, with pictures
+  in Kitty-graphics terminals. Press `e` to edit a note in your `$EDITOR`.
 - **On every device.** The hub serves an installable web app for phones, tablets
   and desktop browsers. It starts offline.
 - **Offline first, conflict free.** Every device keeps all notes. A CRDT, written
@@ -78,6 +80,13 @@ to Home Screen*. The phone needs Tailscale.
   <source media="(prefers-color-scheme: dark)" srcset="site/assets/shots/plugin-window-dark.webp">
   <img alt="The omajot main window on Omarchy: folders and tags, the note list, and a note with a picture, a table and a checklist" src="site/assets/shots/plugin-window-light.webp">
 </picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="site/assets/shots/tui-dark.webp">
+  <img alt="omajot tui in Ghostty: folders and tags, the note list, and a note with a picture, a table and a checklist" src="site/assets/shots/tui-light.webp">
+</picture>
+
+*`omajot tui` in Ghostty, with the Tokyo Night and Catppuccin Latte themes.*
 
 ## How it works
 

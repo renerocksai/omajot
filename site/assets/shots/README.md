@@ -19,3 +19,10 @@ bottom bar (with the address) was painted over with the app background. 640 px w
 notes on a local demo hub. The main window was floated at 1280×800 by a Hyprland
 window rule and captured with grim at 1.25×. For the QR shot the plugin used the
 placeholder hub URL. Only a dark variant exists; the `-light` files are copies.
+
+**Terminal UI** (`tui-*`): `omajot tui` in Ghostty (font size 15, opaque, no
+window rule other than float at 1280×800) against a local demo hub with the
+sample notes, the Lisbon note selected; captured with grim at 1.25×. The TUI
+read the colours of an Omarchy theme from a scratch HOME: Tokyo Night for dark,
+Catppuccin Latte for light, with the Ghostty background set to match. The
+picture is drawn with the Kitty graphics protocol.

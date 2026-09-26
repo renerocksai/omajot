@@ -17,7 +17,7 @@ live refresh (a CLI note, a note from device B), the help overlay, resize,
 and that `q`, a panic and SIGTERM all give the terminal back (`stty -a`).
 
 --capture FILE writes the first screen at 110x30 (sample notes only) as plain
-text, for the docs (site/assets/tui-terminal.txt).
+text (the docs show a screenshot instead: site/assets/shots/tui-*).
 """
 import argparse, json, os, shutil, socket, subprocess, sys, tempfile, time, unicodedata
 

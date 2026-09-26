@@ -275,7 +275,7 @@
     <tr><td><code>--no-auth</code></td><td>off</td><td>No login check, for local tests. The hub refuses to start with it on an address other than loopback.</td></tr>
     <tr><td><code>--web</code></td><td>the web app in the binary</td><td>Serve the web app from this folder instead, for example <code>web/dist</code> while you work on it. The hub reads the folder when it starts.</td></tr>
     <tr><td><code>--bind</code></td><td><code>127.0.0.1</code></td><td>The IPv4 address to listen on. Keep loopback when you use <code>tailscale serve</code>.</td></tr>
-    <tr><td><code>--url</code></td><td>from <code>tailscale serve status</code></td><td>The URL for phones. The hub prints it with a QR code when it starts.</td></tr>
+    <tr><td><code>--url</code></td><td><code>hub</code> in the config file if it is an <code>https</code> URL, else from <code>tailscale serve status</code></td><td>The URL for phones. The hub prints it with a QR code when it starts.</td></tr>
     <tr><td><code>--timeout-ms</code></td><td><code>{{num:src/hub/hub.zig:request_timeout_ms}}</code></td><td>The deadline for normal requests, in milliseconds. The event stream has its own deadline of {{ms:src/hub/hub.zig:sse_timeout_ms}} and ends cleanly {{ms:src/hub/hub.zig:sse_margin_ms}} before it.</td></tr>
   </table></div>
   <p>The hub needs a login (<code>--login</code> or <code>hub_login</code>) or <code>--no-auth</code>. <code>--no-auth</code> ignores <code>hub_login</code>. With the config file, a plain <code>omajot hub</code> is enough, also for a service. Stop the hub with <kbd>Ctrl</kbd>+<kbd>C</kbd>: it finishes the open requests first.</p>
@@ -331,7 +331,7 @@
   "hub_port": 8787,
   "hub_data": "~/omajot-data"
 }</code></pre>
-  <p><code>hub</code>, <code>data</code> and <code>socket</code> are for the daemon, the plugin and the note commands. <code>hub_login</code>, <code>hub_port</code> and <code>hub_data</code> are for <code>omajot hub</code> on the hub computer; its flags win over them.</p>
+  <p><code>hub</code>, <code>data</code> and <code>socket</code> are for the daemon, the plugin and the note commands. <code>hub_login</code>, <code>hub_port</code> and <code>hub_data</code> are for <code>omajot hub</code> on the hub computer; its flags win over them. On the hub computer, <code>omajot hub</code> also uses <code>hub</code> as its phone URL, so it does not need to ask Tailscale.</p>
   <p>omajot uses the first value it finds:</p>
   <ol>
     <li>the command-line flag (<code>--hub</code>, <code>--data</code>, <code>--socket</code>),</li>

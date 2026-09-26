@@ -166,7 +166,7 @@ WantedBy=default.target</code></pre></li>
   <h2>2 · Publish the hub with Tailscale <span class="badge hub">Hub computer</span> <span class="badge all">Every device</span></h2>
   <p>Install Tailscale on the hub computer and on every device that uses omajot: your phone, your laptop, your Omarchy computer. On Omarchy, run <code>omarchy install service tailscale</code>. Log in with the same account on all devices. Then, on the hub computer, run:</p>
 <pre class="cmd"><code><span class="p">$ </span>tailscale serve --bg --https=8443 http://127.0.0.1:8787</code></pre>
-  <p>Tailscale gives the hub a real HTTPS certificate. Your hub URL is now <code>https://your-mac.your-tailnet.ts.net:8443</code>. The hub prints this URL and a QR code when it starts. Restart the hub after you run <code>tailscale serve</code>, so that it finds the URL.</p>
+  <p>Tailscale gives the hub a real HTTPS certificate. Your hub URL is now <code>https://your-mac.your-tailnet.ts.net:8443</code>. The hub prints this URL and a QR code when it starts. Restart the hub after you run <code>tailscale serve</code>, so that it finds the URL. You can also put the URL into <code>~/.config/omajot/config.json</code> on the hub computer as <code>"hub"</code> (see step 4); the hub then uses it and does not ask Tailscale.</p>
   <ul>
     <li>Enable HTTPS certificates for your tailnet: admin console → DNS → HTTPS Certificates.</li>
     <li>The first HTTPS request can take about 30 seconds, because Tailscale gets the certificate then. Open the URL once with <code>curl</code>.</li>
@@ -184,7 +184,7 @@ WantedBy=default.target</code></pre></li>
 
 <section id="config">
   <h2>4 · Tell omajot where your hub is <span class="badge omarchy">Plugin and CLI</span></h2>
-  <p>The plugin needs this step. On other computers, do it only if you want to use <code>omajot qr</code> there. Create <code>~/.config/omajot/config.json</code>:</p>
+  <p>The plugin needs this step. On other computers, do it only if you want to use <code>omajot qr</code> or the note commands there. On the hub computer, it tells the hub its phone URL. Create <code>~/.config/omajot/config.json</code>, or add the key if the file exists already (on the hub computer, it has <code>hub_login</code>):</p>
 <pre><code>{
   "hub": "https://your-mac.your-tailnet.ts.net:8443"
 }</code></pre>

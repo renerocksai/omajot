@@ -54,7 +54,8 @@ const usage =
     \\  --timeout-ms  deadline for ordinary requests (default 30000); the SSE route has
     \\           its own 10-minute deadline and its streams end cleanly before it
     \\  --url    the URL phones use, printed with a QR code at startup
-    \\           (default: found in `tailscale serve status`)
+    \\           (default: "hub" in config.json when it is an https URL, else
+    \\           found in `tailscale serve status`)
     \\
 ;
 
@@ -441,6 +442,11 @@ fn parseOptions(args: []const []const u8, config: paths.Config) !Options {
     if (options.no_auth and flag_login) return error.NeedLoginOrNoAuth;
     // --no-auth on the command line overrides a login from the config file.
     if (!options.no_auth and options.login == null) options.login = config.hub_login;
+    // On the hub computer, "hub" in config.json is this hub's public URL. Only
+    // an https URL: phones cannot use a loopback or plain-http address.
+    if (options.url == null) if (config.hub) |u| if (std.mem.startsWith(u8, u, "https://")) {
+        options.url = u;
+    };
     if (options.no_auth == (options.login != null)) return error.NeedLoginOrNoAuth;
     if (options.no_auth and options.bind[0] != 127) return error.NoAuthRequiresLoopback;
     return options;
@@ -616,4 +622,13 @@ test "parseOptions: config.json supplies defaults, flags win" {
     try std.testing.expectEqualStrings("/d", flags.data);
     const local = try parseOptions(&.{"--no-auth"}, config);
     try std.testing.expect(local.login == null);
+    try std.testing.expect(local.url == null);
+}
+
+test "parseOptions: the phone URL from \"hub\" in config.json, https only" {
+    const https: paths.Config = .{ .hub = "https://mac.tail.ts.net:8443", .hub_login = "me@x" };
+    try std.testing.expectEqualStrings("https://mac.tail.ts.net:8443", (try parseOptions(&.{}, https)).url.?);
+    try std.testing.expectEqualStrings("https://other", (try parseOptions(&.{ "--url", "https://other" }, https)).url.?);
+    const loopback: paths.Config = .{ .hub = "http://127.0.0.1:8787", .hub_login = "me@x" };
+    try std.testing.expect((try parseOptions(&.{}, loopback)).url == null);
 }

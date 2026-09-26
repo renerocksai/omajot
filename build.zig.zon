@@ -1,6 +1,6 @@
 .{
     .name = .omajot,
-    .version = "0.1.2",
+    .version = "0.1.3",
     .fingerprint = 0x5a15b30da7d19af7,
     .minimum_zig_version = "0.16.0",
     .dependencies = .{

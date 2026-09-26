@@ -1,6 +1,6 @@
 {
   "name": "omajot-web",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "private": true,
   "type": "module",
   "description": "omajot PWA: core.wasm replica + CodeMirror editor, served by `omajot hub --web web/dist`",

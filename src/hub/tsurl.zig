@@ -4,19 +4,32 @@ const std = @import("std");
 const Io = std.Io;
 const Allocator = std.mem.Allocator;
 
+/// Where to look for the tailscale CLI. A service (launchd, systemd) runs with
+/// a short PATH, so the usual places follow. The macOS app installs its CLI as
+/// /usr/local/bin/tailscale (a script); calling the app binary directly would
+/// start the GUI instead.
+const candidates = [_][]const u8{
+    "tailscale",
+    "/usr/local/bin/tailscale",
+    "/opt/homebrew/bin/tailscale",
+};
+
 /// Ask `tailscale serve status --json`. Null when tailscale is missing, not
 /// serving this port, or answers something unexpected: the URL is a nicety.
 pub fn detect(gpa: Allocator, io: Io, port: u16) ?[]u8 {
-    const result = std.process.run(gpa, io, .{
-        .argv = &.{ "tailscale", "serve", "status", "--json" },
-        .stdout_limit = .limited(256 * 1024),
-        .stderr_limit = .limited(4096),
-        .timeout = .{ .duration = .{ .raw = .fromSeconds(5), .clock = .awake } },
-    }) catch return null;
-    defer gpa.free(result.stdout);
-    defer gpa.free(result.stderr);
-    if (result.term != .exited or result.term.exited != 0) return null;
-    return fromServeStatus(gpa, result.stdout, port) catch null;
+    for (candidates) |exe| {
+        const result = std.process.run(gpa, io, .{
+            .argv = &.{ exe, "serve", "status", "--json" },
+            .stdout_limit = .limited(256 * 1024),
+            .stderr_limit = .limited(4096),
+            .timeout = .{ .duration = .{ .raw = .fromSeconds(5), .clock = .awake } },
+        }) catch continue;
+        defer gpa.free(result.stdout);
+        defer gpa.free(result.stderr);
+        if (result.term != .exited or result.term.exited != 0) continue;
+        return fromServeStatus(gpa, result.stdout, port) catch null;
+    }
+    return null;
 }
 
 /// `"Web": {"host:443": {"Handlers": {"/": {"Proxy": "http://127.0.0.1:8787"}}}}`

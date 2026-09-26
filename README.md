@@ -2,59 +2,20 @@
 
 **Your notes. Your hub. Everywhere.**
 
-omajot is a markdown notes app in the spirit of Apple Notes. Open it from the
-[Omarchy](https://omarchy.org/) bar, in a main window, or as a web app on your
-phone. Your own small Zig hub syncs all devices over
+omajot is a markdown notes app in the spirit of Apple Notes. Use it in the
+browser, on your phone, in the [Omarchy](https://omarchy.org/) bar, or in the
+terminal. Your own small Zig hub syncs all devices over
 [Tailscale](https://tailscale.com). No cloud account. No Dropbox. No conflicts.
 
-**[Documentation and screenshots →](https://renerocksai.github.io/omajot/)**
+**[Documentation](https://renerocks.ai/omajot/)** ·
+**[Get started](https://renerocks.ai/omajot/get-started.html)** ·
+**[Command line](https://renerocks.ai/omajot/cli.html)** ·
+**[Under the hood](https://renerocks.ai/omajot/under-the-hood.html)**
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="site/assets/shots/desktop-note-dark.webp">
   <img alt="The omajot web app: folders and tags, the note list, and a note with a picture, a table and a checklist in split view" src="site/assets/shots/desktop-note-light.webp">
 </picture>
-
-## No Omarchy? No Linux? No problem.
-
-The web app is a complete omajot client. You do not need Omarchy or Linux. You
-need only the hub:
-
-1. Run the hub on a computer that is always on: a Mac, a Linux computer, or a
-   Windows computer (experimental).
-2. Publish the hub on your tailnet with Tailscale. Tailscale is free for
-   personal use.
-3. Open the hub URL in a desktop browser or on your phone. Install it as an
-   app: on an iPhone or iPad, tap *Share* → *Add to Home Screen*. On Android,
-   and in Chrome or Edge on the desktop, use *Install app*.
-
-Your notes work offline. They sync when the hub is reachable. The Omarchy
-plugin is an extra for Omarchy users. It is not a requirement.
-
-We test the web app in Chrome and Chromium on the desktop and in Safari on
-iOS 26. Other modern browsers should work.
-
-**Get your phone onto the hub without typing the URL.** Use a QR code:
-
-1. `omajot hub` prints its phone URL and a QR code in the terminal when it
-   starts. It finds the URL in `tailscale serve status`. `--url` sets the URL.
-   After you run `tailscale serve`, restart the hub, or look at its start
-   output in tmux.
-2. `omajot qr` prints the QR code on any computer where
-   `~/.config/omajot/config.json` has your hub.
-3. Open the hub URL once in a desktop browser. Click the phone button in the
-   web app. It shows the address of the page as a QR code.
-
-Scan the code with the phone camera and open the link. Then tap *Share* → *Add
-to Home Screen*. The phone needs Tailscale.
-
-<p>
-  <picture><source media="(prefers-color-scheme: dark)" srcset="site/assets/shots/iphone-list-dark.webp"><img alt="The note list on an iPhone" src="site/assets/shots/iphone-list-light.webp" width="210"></picture>
-  <picture><source media="(prefers-color-scheme: dark)" srcset="site/assets/shots/iphone-note-dark.webp"><img alt="A note with a picture and a table on an iPhone" src="site/assets/shots/iphone-note-light.webp" width="210"></picture>
-  <picture><source media="(prefers-color-scheme: dark)" srcset="site/assets/shots/iphone-checklist-dark.webp"><img alt="A checklist on an iPhone" src="site/assets/shots/iphone-checklist-light.webp" width="210"></picture>
-  <picture><source media="(prefers-color-scheme: dark)" srcset="site/assets/shots/iphone-folders-dark.webp"><img alt="Folders and tags on an iPhone" src="site/assets/shots/iphone-folders-light.webp" width="210"></picture>
-</p>
-
-*Real screenshots from iOS 26 Safari (iPhone 17 Pro simulator), sample notes.*
 
 ## Features
 
@@ -65,172 +26,169 @@ to Home Screen*. The phone needs Tailscale.
 - **Folders, pins and a Trash.** Nested folders. Pinned notes show first.
 - **Paste anything.** Screenshots, files, web pages and LibreOffice text. Images
   become attachments. HTML becomes markdown.
-- **In your bar.** A dropdown and a main window, both with three columns and full
-  keyboard control.
-- **In your terminal.** `omajot tui` shows the same three columns, with pictures
-  in Kitty-graphics terminals. Press `e` to edit a note in your `$EDITOR`.
-- **On every device.** The hub serves an installable web app for phones, tablets
-  and desktop browsers. It starts offline.
 - **Offline first, conflict free.** Every device keeps all notes. A CRDT, written
   in Zig, merges concurrent edits.
-- **One QR code away.** `omajot qr` prints your hub URL as a QR code in the terminal.
-- **Coming from Joplin?** One command imports notebooks, notes, tags and images, with their dates.
+- **History.** Every change is kept. `omajot restore` brings back an earlier version.
+- **Scriptable.** Every command has `--json`, and [SKILL.md](SKILL.md) teaches
+  AI agents to use your notes.
+- **Coming from Joplin?** One command imports notebooks, notes, tags and images,
+  with their dates.
+
+## Four ways to your notes
+
+### In the browser and on your phone
+
+The hub serves an installable web app for phones, tablets and desktop
+browsers. It is a complete omajot client: you do not need Omarchy or Linux. It
+starts offline and syncs in the background. Scan the QR code that the hub
+prints, then tap *Share* → *Add to Home Screen*.
+
+<p>
+  <picture><source media="(prefers-color-scheme: dark)" srcset="site/assets/shots/iphone-list-dark.webp"><img alt="The note list on an iPhone" src="site/assets/shots/iphone-list-light.webp" width="200"></picture>
+  <picture><source media="(prefers-color-scheme: dark)" srcset="site/assets/shots/iphone-note-dark.webp"><img alt="A note with a picture and a table on an iPhone" src="site/assets/shots/iphone-note-light.webp" width="200"></picture>
+  <picture><source media="(prefers-color-scheme: dark)" srcset="site/assets/shots/iphone-checklist-dark.webp"><img alt="A checklist on an iPhone" src="site/assets/shots/iphone-checklist-light.webp" width="200"></picture>
+  <picture><source media="(prefers-color-scheme: dark)" srcset="site/assets/shots/iphone-folders-dark.webp"><img alt="Folders and tags on an iPhone" src="site/assets/shots/iphone-folders-light.webp" width="200"></picture>
+</p>
+
+*Safari on iOS 26 (iPhone 17 Pro simulator), with the sample notes.*
+
+### In the Omarchy bar
+
+The Omarchy plugin puts a note icon in the bar. Click it for a dropdown;
+middle-click it for the main window. Both have three columns and full keyboard
+control: <kbd>n</kbd> new note, <kbd>/</kbd> search, <kbd>j</kbd> <kbd>k</kbd>
+move, <kbd>e</kbd> editor or preview.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="site/assets/shots/plugin-window-dark.webp">
   <img alt="The omajot main window on Omarchy: folders and tags, the note list, and a note with a picture, a table and a checklist" src="site/assets/shots/plugin-window-light.webp">
 </picture>
 
+### In the terminal
+
+`omajot tui` shows the same three columns in any terminal. Changes from your
+other devices show up while you read. Press <kbd>e</kbd> to edit the note in
+your `$EDITOR`, for example Neovim: each save goes into the note at once.
+Pictures show in terminals with the Kitty graphics protocol (Ghostty, Kitty,
+WezTerm). The colours come from your Omarchy theme.
+
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="site/assets/shots/tui-dark.webp">
   <img alt="omajot tui in Ghostty: folders and tags, the note list, and a note with a picture, a table and a checklist" src="site/assets/shots/tui-light.webp">
 </picture>
 
-*`omajot tui` in Ghostty, with the Tokyo Night and Catppuccin Latte themes.*
+*`omajot tui` in Ghostty. Dark: the Tokyo Night theme. Light: Catppuccin Latte.*
+
+### On the command line
+
+`omajot ls`, `cat`, `search`, `edit`, `append`, `export` and more: your notes
+are also files for scripts and AI agents. See [Command line](#command-line).
 
 ## How it works
 
 ```
    Omarchy desktop                    always-on computer                   phone, tablet
   ┌──────────────────┐   HTTPS over   ┌───────────────────────┐   HTTPS   ┌──────────────────┐
-  │ QML plugin       │   Tailscale    │ omajot hub            │           │ web app          │
+  │ QML plugin, TUI  │   Tailscale    │ omajot hub            │           │ web app          │
   │ omajot daemon    │◀──────────────▶│ baz on bounded/http   │◀─────────▶│ core.wasm        │
   │ Zig core, native │                │ append-only log, blobs│           │ Zig core, WASM   │
   └──────────────────┘                └───────────────────────┘           └──────────────────┘
 ```
 
-The hub stores and forwards changes. Every device keeps a full copy of all
-notes. The same pure Zig core runs natively in the desktop daemon and, as
-`core.wasm`, in the browser. Read
-[Under the hood](https://renerocksai.github.io/omajot/under-the-hood.html) for the
-CRDT, the edit transforms, and why every limit in the hub is fixed.
+The hub stores and forwards changes, and it serves the web app. Every device
+keeps a full copy of all notes. The same pure Zig core runs natively in the
+desktop daemon and, as `core.wasm`, in the browser. Read
+[Under the hood](https://renerocks.ai/omajot/under-the-hood.html) for the CRDT,
+the edit transforms, and why every limit in the hub is fixed.
 
 ## Quick start
 
 You need a Tailscale account (free for personal use) and a computer that is
-always on for the hub. omajot releases have static binaries, so you do not need
-a compiler. The
-[Get started guide](https://renerocksai.github.io/omajot/get-started.html) has
-all details.
+always on for the hub: a Mac, a Linux computer, or a small server. The releases
+have static binaries, so you do not need a compiler. The
+[Get started guide](https://renerocks.ai/omajot/get-started.html) has all
+details.
 
-Web app only (no Omarchy): do steps 1, 2 and 5. With the Omarchy plugin: do
-steps 1 to 5.
-
-**1. Run the hub** on the computer that is always on (macOS or Linux).
-Install omajot with Homebrew:
+**1. Install omajot on the hub computer.**
 
 ```sh
-brew install renerocksai/tap/omajot
+brew install renerocksai/tap/omajot                  # macOS, or Linux with Homebrew
 ```
-
-or, on Linux without Homebrew:
 
 ```sh
-git clone https://github.com/renerocksai/omajot ~/omajot && ~/omajot/tools/install-release.sh
+git clone https://github.com/renerocksai/omajot ~/omajot && ~/omajot/tools/install-release.sh   # Linux without Homebrew
 ```
 
-Put your Tailscale login name in `~/.config/omajot/config.json` (add the key
-if the file exists already):
+The install script checks the SHA-256 of the download against `release.json`
+and links `~/.local/bin/omajot`. On Windows (experimental), download
+`omajot-x86_64-windows.exe` from the
+[releases](https://github.com/renerocksai/omajot/releases).
+
+**2. Tell the hub your Tailscale login** in `~/.config/omajot/config.json` (add
+the key if the file exists already). The hub accepts requests only from this
+login.
 
 ```json
 { "hub_login": "you@example.com" }
 ```
 
-Then start the hub:
+**3. Start the hub and publish it on your tailnet.**
 
 ```sh
-tmux new -s omajot-hub
-omajot hub
-```
-
-The hub listens on `127.0.0.1:8787` and keeps the notes in `~/omajot-data`.
-The web app is built into the binary. With Homebrew,
-`brew services start omajot` runs the hub as a service instead of tmux.
-
-The `tmux` line is optional: tmux keeps the hub running after you close the
-terminal. Omarchy includes tmux; on a Mac, install it with `brew install tmux`.
-Leave the session with *Ctrl+b*, then *d*. Come back with
-`tmux attach -t omajot-hub`. The
-[Get started guide](https://renerocksai.github.io/omajot/get-started.html#tmux)
-has more, and shows how to run the hub as a service that starts at boot
-(systemd on Omarchy and Linux, launchd on macOS).
-
-`tools/install-release.sh` downloads the released binary for this computer. It
-checks the SHA-256 against `release.json` in the repository before it installs
-the binary into `bin/omajot` and links `~/.local/bin/omajot` to it. Replace
-`you@example.com` with your Tailscale login name. On Windows (experimental), download `omajot-x86_64-windows.exe`
-from the [releases](https://github.com/renerocksai/omajot/releases).
-
-**2. Publish it on your tailnet**, on the same computer:
-
-```sh
+brew services start omajot        # with Homebrew: a service that starts at login
 tailscale serve --bg --https=8443 http://127.0.0.1:8787
 ```
 
-Your hub URL is now `https://your-mac.your-tailnet.ts.net:8443`. Do not use
-Tailscale Funnel.
+Without Homebrew, run `omajot hub` in tmux, or as a systemd service (see
+[Start the hub at boot](https://renerocks.ai/omajot/get-started.html#boot)).
+The hub listens on `127.0.0.1:8787`, keeps the notes in `~/omajot-data` and
+prints the phone URL with a QR code when it starts. Your hub URL is
+`https://your-mac.your-tailnet.ts.net:8443`. Do not use Tailscale Funnel.
 
-**3. Omarchy only: install the plugin** on your Omarchy computer:
+**4. Open the hub URL** in your browser and on your phone (with Tailscale).
+Add it to the home screen. `omajot qr` shows the QR code again on any computer
+that knows your hub.
+
+**5. Omarchy: add the plugin**, and tell it where the hub is:
 
 ```sh
 omarchy plugin add https://github.com/renerocksai/omajot --enable
 ```
 
-When the plugin starts the first time, it runs `tools/install-release.sh`. The
-script downloads the omajot binary for this computer and checks its SHA-256. A
-local build in `zig-out/` has priority, if it exists.
-
-**4. For the plugin (and `omajot qr`): tell omajot where the hub is.** Create
-`~/.config/omajot/config.json`:
-
 ```json
 { "hub": "https://your-mac.your-tailnet.ts.net:8443" }
 ```
 
-**5. Open it in your browser and on your phone.** On a computer, open the hub
-URL in the browser. Install Tailscale on the phone. Scan the QR code
-from the hub, from `omajot qr` or from the web app (see above). Then add the web
-app to the home screen.
-
-If there is no release yet, build from source (below).
-
-**Optional: start omajot like an app.** `tools/install-app.sh` (in the plugin
-folder) adds omajot to the app launcher (*SUPER + SPACE*). For a key that opens
-and closes the main window, add this line to `~/.config/hypr/bindings.lua`:
-
-```lua
-o.bind("SUPER + SHIFT + N", "omajot", "omarchy-shell shell toggle io.github.renerocksai.omajot")
-```
+The second block goes into `~/.config/omajot/config.json` on your Omarchy
+computer. The plugin installs the omajot binary by itself and links
+`~/.local/bin/omajot`, so `omajot tui` and the commands work there too.
+`tools/install-app.sh` in the plugin folder adds omajot to the app launcher.
 
 ### Try it on one computer
 
 ```sh
+git clone https://github.com/renerocksai/omajot && cd omajot
 tools/install-release.sh
-bin/omajot hub --port 8787 --data /tmp/omajot-demo --no-auth &
+bin/omajot hub --data /tmp/omajot-demo --no-auth &
 tools/seed_sample.py --data /tmp/omajot-demo-replica --hub http://127.0.0.1:8787
 ```
 
 Open `http://127.0.0.1:8787`. The sample notes are in `examples/sample-notes/`.
 
-## Coming from Joplin?
+### Coming from Joplin?
 
-Only for Joplin users; skip this if you start fresh. The importer needs
-Python 3. Run it on the computer that has Joplin, in an omajot folder: with
-the Omarchy plugin, that is the plugin folder that `omarchy plugin add` made
-(below); without it, your omajot clone (run `tools/install-release.sh` there
-first).
+The importer needs Python 3. It reads `~/.config/joplin-desktop` and does not
+change it. Run it in the plugin folder (or in your omajot clone after
+`tools/install-release.sh`):
 
 ```sh
-cd ~/.config/omarchy/plugins/io.github.renerocksai.omajot   # the plugin folder
+cd ~/.config/omarchy/plugins/io.github.renerocksai.omajot
 tools/import_joplin.py --dry-run
 tools/import_joplin.py --data ~/omajot-import
 ```
 
-The importer uses your own build (`zig-out`) if there is one, else the release binary (`bin/omajot`).
-
-The importer reads `~/.config/joplin-desktop` and does not change it. It sends
-the notes to your hub, and the plugin gets them from there. You can run it
-again: it skips notes that it imported before.
+It sends the notes to your hub. You can run it again: it skips notes that it
+imported before.
 
 ## Command line
 
@@ -274,7 +232,7 @@ omajot ls -r --json | jq -r '.notes[].path'
 ```
 
 Command-line flags come first, then `~/.config/omajot/config.json`, then the
-defaults. See the [CLI reference](https://renerocksai.github.io/omajot/cli.html).
+defaults. See the [CLI reference](https://renerocks.ai/omajot/cli.html).
 
 ## Platforms
 
@@ -310,7 +268,7 @@ Development:
 
 ```sh
 zig build                 # zig-out/bin/omajot (Linux: static, musl)
-zig build -Doptimize=ReleaseSafe -Dstrip=true   # the release build, about 2 MB
+zig build -Doptimize=ReleaseSafe -Dstrip=true   # the release build, about 3.5 MB
 zig build test            # core, hub and daemon tests
 zig build wasm            # zig-out/web/core.wasm
 npm test                  # plugin model tests (+ a Qt JS engine smoke test)
@@ -324,10 +282,10 @@ you work on the web app.
 
 ## Documentation
 
-- [Get started](https://renerocksai.github.io/omajot/get-started.html)
-- [Using omajot](https://renerocksai.github.io/omajot/using.html)
-- [Command line](https://renerocksai.github.io/omajot/cli.html)
-- [Under the hood](https://renerocksai.github.io/omajot/under-the-hood.html)
+- [Get started](https://renerocks.ai/omajot/get-started.html)
+- [Using omajot](https://renerocks.ai/omajot/using.html)
+- [Command line](https://renerocks.ai/omajot/cli.html)
+- [Under the hood](https://renerocks.ai/omajot/under-the-hood.html)
 - [DESIGN.md](DESIGN.md): the decisions and why.
 - [docs/PROTOCOL.md](docs/PROTOCOL.md): the client protocol, the hub API and the core API.
 

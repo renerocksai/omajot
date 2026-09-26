@@ -72,12 +72,12 @@ your `$EDITOR`, for example Neovim: each save goes into the note at once.
 Pictures show in terminals with the Kitty graphics protocol (Ghostty, Kitty,
 WezTerm). The colours come from your Omarchy theme.
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="site/assets/shots/tui-dark.webp">
-  <img alt="omajot tui in Ghostty: folders and tags, the note list, and a note with a picture, a table and a checklist" src="site/assets/shots/tui-light.webp">
-</picture>
+<p>
+  <img alt="omajot tui in Ghostty with the Tokyo Night theme: folders and tags, the note list, and a note with a picture, a table and a checklist" src="site/assets/shots/tui-dark.webp" width="49%">
+  <img alt="omajot tui in Ghostty with the Catppuccin Latte theme: the same notes in light colours" src="site/assets/shots/tui-light.webp" width="49%">
+</p>
 
-*`omajot tui` in Ghostty. Dark: the Tokyo Night theme. Light: Catppuccin Latte.*
+*`omajot tui` in Ghostty with two Omarchy themes: Tokyo Night and Catppuccin Latte.*
 
 ### On the command line
 

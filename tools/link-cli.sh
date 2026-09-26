@@ -39,7 +39,19 @@ else
   say "linked $link -> $target"
 fi
 
+# Not on PATH yet: say exactly how to add it for the user's shell. Shell
+# configuration files are never edited automatically.
 case ":$PATH:" in
   *":$bindir:"*) ;;
-  *) say "$bindir is not on your PATH. Add it, for example: export PATH=\"$bindir:\$PATH\"" ;;
+  *)
+    case "$(basename "${SHELL:-sh}")" in
+      zsh) hint="echo 'export PATH=\"$bindir:\$PATH\"' >> ~/.zprofile" ;;
+      bash) if [ "$(uname -s)" = Darwin ]; then rc="~/.bash_profile"; else rc="~/.bashrc"; fi
+            hint="echo 'export PATH=\"$bindir:\$PATH\"' >> $rc" ;;
+      fish) hint="fish_add_path $bindir" ;;
+      *) hint="export PATH=\"$bindir:\$PATH\"   (in your shell's startup file)" ;;
+    esac
+    say "$bindir is not on your PATH yet. Add it once, then open a new terminal:"
+    say "  $hint"
+    ;;
 esac

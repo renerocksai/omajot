@@ -225,6 +225,7 @@ at the same time stays.
 | `omajot history <note>`, `omajot restore <note> <version\|time>` | Lists the versions of a note; makes an earlier one the current text. |
 | `omajot export <dir>` | Writes every note as `Folder/Title.md`, with its attachments. |
 | `omajot status` | Shows the daemon, the data folder and the sync state. |
+| `omajot tui` | Browse, search and edit your notes in the terminal: folders and tags, the notes, the note. Edits go through `$VISUAL`/`$EDITOR`. |
 | `omajot hub --login <you> [--port 8787] [--data <dir>] [--url <url>]` | Runs the hub. Prints its phone URL and a QR code at start. |
 | `omajot daemon [--hub <url> \| --no-hub] [--data <dir>] [--socket <path>]` | The local copy that the plugin and the commands use. |
 | `omajot qr [url]` | Prints a URL (default: your hub) as a QR code in the terminal. |

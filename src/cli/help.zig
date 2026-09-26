@@ -64,6 +64,7 @@ pub const overview =
     \\  rmdir <folder>              Delete an empty folder
     \\
     \\Other:
+    \\  tui                         Browse and edit your notes in the terminal
     \\  export <dir>                Write all notes as Markdown files
     \\  status                      Show the daemon and the sync state
     \\  qr [url]                    Show the hub address as a QR code

@@ -63,6 +63,7 @@ sync to the user's other devices within seconds, like their own typing.
 | `omajot restore <note> <version\|time>` | Make an earlier text current (as a normal, undoable change) |
 | `omajot export <dir> [--trash] [--force]` | Every note as `<dir>/Folder/Title.md`, attachments in `<dir>/attachments/`, a README |
 | `omajot status` | Daemon, data directory, socket, hub, sync state |
+| `omajot tui` | Interactive terminal UI (for people; do not use it) |
 
 Times (`cat --at`, `restore`): `2026-09-26 14:03` (local), `2026-09-26T12:03Z`
 (UTC), `2026-09-26`, Unix milliseconds, or a time ago: `90s`, `15m`, `2h`, `3d`, `1w`.

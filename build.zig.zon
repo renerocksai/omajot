@@ -8,6 +8,12 @@
             .url = "https://github.com/technologylab-ai/baz/archive/c7d489a27dde958fcafbad6c9a31a4d94f28eae8.tar.gz",
             .hash = "baz-0.1.0-q-QL0_WMZwDUYjL9MxarXngPK4jYQydz-ENJMhPLnl4S",
         },
+        // `omajot tui`. No release tag for Zig 0.16 yet: main at 173a890.
+        .vaxis = .{
+            .url = "https://github.com/rockorager/libvaxis/archive/173a890d1394946b5d7623c66cd34bcd36d8eeb8.tar.gz",
+            .hash = "vaxis-0.6.0-BWNV_OybDABnzf12gCPzy_IgAjkKkonDJF-2O_7XyLtD",
+            .lazy = true,
+        },
     },
     .paths = .{ "build.zig", "build.zig.zon", "src", "docs", "LICENSE", "README.md" },
 }

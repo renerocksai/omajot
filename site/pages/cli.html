@@ -1,10 +1,10 @@
-<!-- {"title": "Command line · omajot", "nav": "CLI", "description": "The omajot commands for your notes (ls, cat, edit, write, history, export …), omajot hub, omajot daemon and omajot qr: every flag, the JSON output, the config file and the import tools."} -->
+<!-- {"title": "Command line · omajot", "nav": "CLI", "description": "The omajot commands for your notes (ls, cat, edit, write, history, export …), the terminal UI omajot tui, omajot hub, omajot daemon and omajot qr: every flag, the JSON output, the config file and the import tools."} -->
 <div class="page-head">
   <p class="eyebrow">Command line</p>
   <h1>Your notes in the terminal</h1>
   <p class="lede"><code>omajot</code> is one binary. Its commands read and change your notes from a terminal or a script, and it runs the hub and the desktop daemon.</p>
   <nav class="toc" aria-label="On this page">
-    <a href="#notes">Note commands</a><a href="#json">JSON and exit codes</a><a href="#hub">omajot hub</a><a href="#daemon">omajot daemon</a><a href="#qr">omajot qr</a><a href="#config">Config file</a><a href="#tools">Tools</a>
+    <a href="#notes">Note commands</a><a href="#tui">omajot tui</a><a href="#json">JSON and exit codes</a><a href="#hub">omajot hub</a><a href="#daemon">omajot daemon</a><a href="#qr">omajot qr</a><a href="#config">Config file</a><a href="#tools">Tools</a>
   </nav>
 </div>
 
@@ -208,6 +208,32 @@
 <pre><code>omajot status</code></pre>
 <pre class="cmd"><code><span class="p">$ </span>omajot status
 <span class="p">$ </span>omajot status --no-start</code></pre>
+</section>
+
+<section id="tui">
+  <h2><code>omajot tui</code></h2>
+  <p>A terminal UI for your notes, like the plugin's main window: the folders, the tags and the Trash on the left, the notes in the middle, the note as formatted Markdown on the right. It uses the daemon like the other commands and starts one when none runs. When a note changes on another device, the TUI shows the change at once. The status bar shows the sync state: synced, syncing, connecting, offline, or local only.</p>
+<pre><code>omajot tui [--data &lt;dir&gt;] [--socket &lt;path&gt;] [--no-start] [--hub &lt;url&gt; | --no-hub]</code></pre>
+  <div class="table"><table>
+    <tr><th>Key</th><th>What it does</th></tr>
+    <tr><td><code>j</code> <code>k</code>, <code>↓</code> <code>↑</code></td><td>Moves down and up in the column.</td></tr>
+    <tr><td><code>h</code> <code>l</code>, <code>←</code> <code>→</code>, <code>Tab</code></td><td>Goes to the column on the left or right.</td></tr>
+    <tr><td><code>g</code> <code>G</code></td><td>Goes to the first or the last item.</td></tr>
+    <tr><td><code>d</code> <code>u</code></td><td>Scrolls the note down or up.</td></tr>
+    <tr><td><code>/</code></td><td>Searches the title and text of all notes. <code>Enter</code> keeps the result, <code>Esc</code> clears it.</td></tr>
+    <tr><td><code>e</code>, <code>Enter</code></td><td>Opens the note in your text editor, as <a href="#edit"><code>omajot edit</code></a> does.</td></tr>
+    <tr><td><code>n</code></td><td>Makes a note: type the title, then the editor opens. The note goes into the folder that you are in.</td></tr>
+    <tr><td><code>p</code></td><td>Pins or unpins the note. Pinned notes come first.</td></tr>
+    <tr><td><code>x</code></td><td>Moves the note to the Trash. In the Trash, <code>x</code> restores it.</td></tr>
+    <tr><td><code>m</code></td><td>Moves the note to a folder that you select.</td></tr>
+    <tr><td><code>N</code></td><td>Makes a folder, inside the selected folder.</td></tr>
+    <tr><td><code>r</code></td><td>Renames the selected folder.</td></tr>
+    <tr><td><code>?</code></td><td>Shows all keys.</td></tr>
+    <tr><td><code>q</code></td><td>Quits.</td></tr>
+  </table></div>
+  <p><strong>Editing.</strong> The TUI gives the terminal to your editor (<code>$VISUAL</code>, else <code>$EDITOR</code>, else <code>vi</code>) and comes back when the editor closes. Each save goes into the note at once. When the note also changes on another device while you edit, omajot keeps both changes and the status bar says <em>Saved and merged</em>. The Omarchy plugin and the web app can have the same note open at the same time.</p>
+  <p><strong>Pictures</strong> show in terminals with the Kitty graphics protocol (Kitty, Ghostty, WezTerm). Other terminals show a line with the name of the picture. <strong>Colours</strong> come from the current Omarchy theme, else from a built-in dark theme. Set <code>NO_COLOR</code> to use the colours of your terminal. The icons need a <a href="https://www.nerdfonts.com/">Nerd Font</a>, as in Omarchy.</p>
+  <p>The TUI needs at least 20 × 3 cells. From 110 columns it shows three columns, from 70 columns two, below that one. It gives the terminal back in all cases: when you quit, after an error, and on <code>SIGTERM</code>.</p>
 </section>
 
 <section id="json">

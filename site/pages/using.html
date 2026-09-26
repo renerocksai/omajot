@@ -1,10 +1,10 @@
-<!-- {"title": "Using omajot", "nav": "Using omajot", "description": "The omajot dropdown, main window and web app: keys, markdown editor and preview, checklists, tags, folders, paste, attachments, trash and offline use."} -->
+<!-- {"title": "Using omajot", "nav": "Using omajot", "description": "The omajot dropdown, main window, web app and terminal UI: keys, markdown editor and preview, checklists, tags, folders, paste, attachments, trash and offline use."} -->
 <div class="page-head">
   <p class="eyebrow">Using omajot</p>
   <h1>Write, find, sync</h1>
-  <p class="lede">This page shows the plugin in the Omarchy bar and the web app on your phone. Both show the same notes and work the same way.</p>
+  <p class="lede">This page shows the plugin in the Omarchy bar, the web app on your phone and the terminal UI. All show the same notes and work the same way.</p>
   <nav class="toc" aria-label="On this page">
-    <a href="#views">Dropdown and main window</a><a href="#keys">Keys</a><a href="#editor">Editor and preview</a><a href="#notes">Titles, checklists, tags</a><a href="#folders">Folders, pins, trash</a><a href="#paste">Paste and attachments</a><a href="#sync">Sync and offline</a><a href="#webapp">Web app</a><a href="#settings">Plugin settings</a>
+    <a href="#views">Dropdown and main window</a><a href="#keys">Keys</a><a href="#editor">Editor and preview</a><a href="#notes">Titles, checklists, tags</a><a href="#folders">Folders, pins, trash</a><a href="#paste">Paste and attachments</a><a href="#sync">Sync and offline</a><a href="#webapp">Web app</a><a href="#terminal">Terminal UI</a><a href="#settings">Plugin settings</a>
   </nav>
 </div>
 
@@ -132,6 +132,45 @@
   </div>
   <p>Install the web app on the desktop too: in Chrome or Edge, use <em>Install app</em>. We test the web app in Chrome and Chromium on the desktop and in Safari on iOS 26. Other modern browsers should work.</p>
   <p>Add the web app to the home screen: on an iPhone or iPad, tap <em>Share</em> → <em>Add to Home Screen</em>. The web app then starts offline too. Open it in one tab only: a second tab asks which tab keeps the notes.</p>
+</section>
+
+<section id="terminal">
+  <h2>The terminal UI</h2>
+  <p>Run <code>omajot tui</code> in a terminal. It shows the folders and tags, the notes and the note, like the main window. Move with <code>j</code> <code>k</code> <code>h</code> <code>l</code> or the arrow keys, search with <code>/</code>, and press <code>e</code> to edit the note in <code>$EDITOR</code> (for example Neovim). Each save goes into the note at once, and changes from your other devices show up while you read. Press <code>?</code> for all keys. The <a href="cli.html#tui">CLI reference</a> has the details.</p>
+  <div class="terminal" style="max-width:none" aria-label="omajot tui with the sample notes, 110 columns">
+    <div class="bar"><i></i><i></i><i></i></div>
+<pre style="line-height:1.2"><span class="p">$</span> omajot tui
+╭─ omajot ───────────────────╮╭─ All notes · 25 ─────────────────────────╮╭─ preview ────────────────────────╮
+│     All notes          25  ││    Welcome to omajot 👋  #omajot         ││ Notes  ·  4m ago                 │
+│     Pinned              2  ││  4m ago  omajot keeps your notes in mar  ││                                  │
+│     Notes               3  ││                                          ││ Welcome to omajot 👋             │
+│ FOLDERS                    ││    Groceries  #shopping                  ││ ━━━━━━━━━━━━━━━━━━━━             │
+│     Home                6  ││  38m ago  Oat milk Coffee beans Tomatoe  ││                                  │
+│       Garden            2  ││                                          ││ omajot keeps your notes in       │
+│     Ideas               3  ││  Lisbon in October  #lisbon  #travel     ││ markdown, on all your devices,   │
+│     Recipes             4  ││  yesterday  Tram 28 Day Plan Thu Arrive  ││ and syncs them through your own  │
+│     Travel              3  ││                                          ││ hub.                             │
+│     Work                6  ││  Weekend plans  #family                  ││                                  │
+│       Meetings          3  ││  yesterday  Farmers market, Saturday 9:  ││   Open omajot from the bar       │
+│       Projects          3  ││                                          ││   Press n for a new note         │
+│ TAGS                       ││  Project Lighthouse: kickoff  #lighthou  ││   Scan the QR code with your     │
+│     #1on1               1  ││  2d ago  Goal: collect the sensor data   ││   phone                          │
+│     #api                1  ││                                          ││   Add omajot to your home screen │
+│     #baking             1  ││  Release checklist  #release             ││                                  │
+│     #coffee             1  ││  3d ago  Changelog Version bump Tests g  ││                                  │
+│     #family             2  ││                                          ││ The first line of a note is its  │
+│     #garden             2  ││  Packing list  #travel                   ││ title. Words like #omajot become │
+│     #idea               1  ││  4d ago  Passport Charger adapter Rain   ││ tags. Paste an image and it      │
+│     #lighthouse         3  ││                                          ││ becomes an attachment.           │
+│     #lisbon             1  ││  Lighthouse API sketch  #api  #lighthou  ││                                  │
+│     #markdown           1  ││  6d ago  One reading as it arrives from  ││ Read more: omajot on GitHub      │
+│     #meeting            2  ││                                          ││                                  │
+│     #omajot             2  ││  Shortcuts I keep forgetting  #omarchy   ││                                  │
+│     #omarchy            1  ││  7d ago  Keys Where What Super Space Om  ││                                  │
+│     #planning           1  ││                                          ││                                  │
+╰────────────────────────────╯╰──────────────────────────────────────────╯╰──────────────────────────────────╯
+ ● Synced                              ? help · / search · n new · e edit · p pin · x trash · m move · q quit</pre>
+  </div>
 </section>
 
 <section id="settings">

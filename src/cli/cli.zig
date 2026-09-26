@@ -13,6 +13,7 @@ const paths = @import("../daemon/paths.zig");
 const attachments = @import("../daemon/attachments.zig");
 const client = @import("client.zig");
 const editor = @import("editor.zig");
+const editsession = @import("editsession.zig");
 const timefmt = @import("timefmt.zig");
 const help = @import("help.zig");
 
@@ -27,7 +28,7 @@ pub const exit = struct {
 };
 
 /// Largest note text a command sends (the daemon reads 16 MiB lines).
-const max_text_bytes: usize = 15 << 20;
+const max_text_bytes = editsession.max_text_bytes;
 
 pub fn isVerb(name: []const u8) bool {
     for (help.verbs) |v| if (std.mem.eql(u8, v.name, name)) return true;
@@ -802,141 +803,39 @@ fn cmdTags(ctx: *Ctx) !void {
 
 // ---------------------------------------------------------------- edit
 
-const Watch = struct {
-    ctx: *Ctx,
-    c: *client.Client,
-    note: []const u8,
-    file: []const u8,
-    /// What the editor last saved (and was applied), owned by gpa.
-    last: []u8,
-    mtime: i96 = 0,
-    size: u64 = 0,
-    saves: usize = 0,
-    failed: ?[]u8 = null,
-    stop: std.atomic.Value(bool) = .init(false),
-
-    fn check(w: *Watch) !void {
-        const io = w.ctx.io;
-        const st = Io.Dir.cwd().statFile(io, w.file, .{}) catch return; // mid-save rename
-        if (st.mtime.nanoseconds == w.mtime and st.size == w.size) return;
-        // Let the editor finish writing: read only a file that stays the same for 100 ms.
-        io.sleep(.fromMilliseconds(100), .awake) catch {};
-        const again = Io.Dir.cwd().statFile(io, w.file, .{}) catch return;
-        if (again.mtime.nanoseconds != st.mtime.nanoseconds or again.size != st.size) return;
-        const now_text = Io.Dir.cwd().readFileAlloc(io, w.file, w.ctx.gpa, .limited(max_text_bytes)) catch return;
-        w.mtime = st.mtime.nanoseconds;
-        w.size = st.size;
-        if (std.mem.eql(u8, now_text, w.last)) {
-            w.ctx.gpa.free(now_text);
-            return;
-        }
-        var arena_state: std.heap.ArenaAllocator = .init(w.ctx.gpa);
-        defer arena_state.deinit();
-        _ = w.c.call(arena_state.allocator(), "put", .{ .note = w.note, .base = w.last, .text = now_text }) catch |err| {
-            w.ctx.gpa.free(now_text);
-            if (w.failed == null) w.failed = w.ctx.gpa.dupe(u8, if (err == error.Refused) w.c.last_error else @errorName(err)) catch null;
-            return err;
-        };
-        w.ctx.gpa.free(w.last);
-        w.last = now_text;
-        w.saves += 1;
-    }
-
-    fn loop(w: *Watch) void {
-        while (!w.stop.load(.acquire)) {
-            w.ctx.io.sleep(.fromMilliseconds(250), .awake) catch {};
-            w.check() catch {};
-        }
-    }
-};
-
-fn safeName(arena: Allocator, s: []const u8) ![]const u8 {
-    var out: std.ArrayList(u8) = .empty;
-    for (s) |b| {
-        const bad = b < 0x20 or b == 0x7f or std.mem.findScalar(u8, "/\\:*?\"<>|", b) != null;
-        if (bad) {
-            if (out.items.len == 0 or out.items[out.items.len - 1] != '-') try out.append(arena, '-');
-        } else try out.append(arena, b);
-    }
-    var name: []const u8 = std.mem.trim(u8, out.items, " .-");
-    // At most 100 bytes, cut at a UTF-8 boundary.
-    if (name.len > 100) {
-        var cut: usize = 100;
-        while (cut > 0 and (name[cut] & 0xC0) == 0x80) cut -= 1;
-        name = std.mem.trimEnd(u8, name[0..cut], " .");
-    }
-    if (name.len == 0) return "Untitled";
-    // Names Windows reserves.
-    const reserved = [_][]const u8{ "con", "prn", "aux", "nul", "com1", "com2", "com3", "com4", "com5", "com6", "com7", "com8", "com9", "lpt1", "lpt2", "lpt3", "lpt4", "lpt5", "lpt6", "lpt7", "lpt8", "lpt9" };
-    const stem = name[0 .. std.mem.findScalar(u8, name, '.') orelse name.len];
-    for (reserved) |r| if (std.ascii.eqlIgnoreCase(stem, r)) return std.fmt.allocPrint(arena, "{s}_", .{name});
-    return name;
-}
-
-/// Owner-only permissions (Windows: the default).
-fn private(comptime mode: u32) Io.File.Permissions {
-    if (@import("builtin").os.tag == .windows) return .default_file;
-    return .fromMode(mode);
-}
+const safeName = editsession.safeName;
 
 fn cmdEdit(ctx: *Ctx) !void {
     try ctx.maxPos(1);
     const i = try ctx.note(try ctx.pos(0, "note"));
     const l = try ctx.listing();
-    const id = try ctx.gpa.dupe(u8, l.notes[i].id);
-    defer ctx.gpa.free(id);
+    const id = l.notes[i].id;
     const path = try ctx.path(i);
     const choice = editor.choose(ctx.io, ctx.env) catch return ctx.fail(exit.software, "{s}", .{editor.no_editor_message});
     const text = try ctx.readText(id);
 
-    // A private directory for the file: $XDG_RUNTIME_DIR, else $TMPDIR, else /tmp.
-    const base = ctx.env.get("XDG_RUNTIME_DIR") orelse ctx.env.get("TMPDIR") orelse "/tmp";
-    var rnd: [4]u8 = undefined;
-    ctx.io.random(&rnd);
-    const dir = try std.fmt.allocPrint(ctx.arena, "{s}/omajot-edit-{x}", .{ std.mem.trimEnd(u8, base, "/"), std.mem.readInt(u32, &rnd, .little) });
-    Io.Dir.cwd().createDir(ctx.io, dir, private(0o700)) catch |err| return ctx.fail(exit.software, "cannot make {s}: {s}", .{ dir, @errorName(err) });
-    defer Io.Dir.cwd().deleteTree(ctx.io, dir) catch {};
-    const file = try std.fmt.allocPrint(ctx.arena, "{s}/{s}.md", .{ dir, try safeName(ctx.arena, l.notes[i].title) });
-    try Io.Dir.cwd().writeFile(ctx.io, .{ .sub_path = file, .data = text, .flags = .{ .permissions = private(0o600) } });
-
     const c = try ctx.daemon();
-    var w: Watch = .{ .ctx = ctx, .c = c, .note = id, .file = file, .last = try ctx.gpa.dupe(u8, text) };
-    defer ctx.gpa.free(w.last);
-    defer if (w.failed) |f| ctx.gpa.free(f);
-    if (Io.Dir.cwd().statFile(ctx.io, file, .{})) |st| {
-        w.mtime = st.mtime.nanoseconds;
-        w.size = st.size;
-    } else |_| {}
-
-    var child = editor.spawn(ctx.arena, ctx.io, choice, file) catch |err|
+    const s = editsession.Session.begin(ctx.gpa, ctx.io, ctx.env, c, id, l.notes[i].title, text) catch |err|
+        return ctx.fail(exit.software, "cannot write the note to a private file: {s}", .{@errorName(err)});
+    defer s.deinit();
+    const code = s.run(ctx.arena, choice) catch |err|
         return ctx.fail(exit.software, "cannot start the editor \"{s}\" (from ${s}): {s}", .{ choice.command, switch (choice.source) {
             .visual => "VISUAL",
             .editor => "EDITOR",
             .fallback => "EDITOR not set; vi",
         }, @errorName(err) });
-    const watcher = try std.Thread.spawn(.{}, Watch.loop, .{&w});
-    const term = child.wait(ctx.io) catch null;
-    w.stop.store(true, .release);
-    watcher.join();
-    // The last save, if the watcher did not see it yet.
-    w.mtime = 0;
-    w.check() catch {};
 
-    if (w.failed) |f| return ctx.fail(exit.software, "could not save your changes: {s}. Your text is in {s}", .{ f, file });
+    if (s.failed) |f| return ctx.fail(exit.software, "could not save your changes: {s}. Your text is in {s}", .{ f, s.file });
     const final = try ctx.readText(id);
-    const merged = !std.mem.eql(u8, final, w.last);
-    const editor_failed = if (term) |t| switch (t) {
-        .exited => |code| code != 0,
-        else => true,
-    } else true;
-    if (ctx.json) return ctx.emitJson(.{ .ok = true, .id = id, .path = path, .changed = w.saves > 0, .saves = w.saves, .merged = merged });
-    if (w.saves == 0) {
+    const merged = !std.mem.eql(u8, final, s.last);
+    if (ctx.json) return ctx.emitJson(.{ .ok = true, .id = id, .path = path, .changed = s.saves > 0, .saves = s.saves, .merged = merged });
+    if (s.saves == 0) {
         try ctx.out.print("unchanged {s}\n", .{path});
     } else {
-        try ctx.out.print("saved {s} ({d} {s})\n", .{ path, w.saves, if (w.saves == 1) "save" else "saves" });
+        try ctx.out.print("saved {s} ({d} {s})\n", .{ path, s.saves, if (s.saves == 1) "save" else "saves" });
     }
     if (merged) try ctx.out.print("The note also changed elsewhere while you edited. omajot kept both changes.\n", .{});
-    if (editor_failed) std.debug.print("omajot edit: the editor did not exit cleanly; omajot kept every save it saw\n", .{});
+    if (code != 0) std.debug.print("omajot edit: the editor did not exit cleanly; omajot kept every save it saw\n", .{});
 }
 
 // ---------------------------------------------------------------- history
@@ -1203,6 +1102,7 @@ fn cmdStatus(ctx: *Ctx) !void {
 
 test {
     _ = editor;
+    _ = editsession;
     _ = timefmt;
     _ = help;
 }

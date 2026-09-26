@@ -296,7 +296,7 @@ def main():
         dc, sc = os.path.join(ROOT, "c"), os.path.join(ROOT, "c.sock")
         omajot(dc, sc, "status", "--no-start", want=69)
         st = jomajot(dc, sc, "status", "--no-hub")
-        assert st["mode"] == "background" and st["data"] == dc, st
+        assert st["mode"] == "background" and os.path.realpath(st["data"]) == os.path.realpath(dc), st  # macOS: /tmp -> /private/tmp
         omajot(dc, sc, "new", "Background note", "--no-hub")
         C = Daemon("C", dc, sc, None)  # a plugin daemon takes over from the background one
         others.append(C)

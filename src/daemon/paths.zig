@@ -25,9 +25,21 @@ pub const Config = struct {
     socket: ?[]const u8 = null,
 };
 
+/// The user's home: $HOME, else %USERPROFILE% (Windows usually has no HOME).
+fn homeDir(env: *const std.process.Environ.Map) ?[]const u8 {
+    if (env.get("HOME")) |h| if (h.len > 0) return h;
+    if (env.get("USERPROFILE")) |h| if (h.len > 0) return h;
+    return null;
+}
+
+/// $XDG_CONFIG_HOME/omajot/config.json, else ~/.config/omajot/config.json;
+/// on Windows %APPDATA%\omajot\config.json when neither XDG nor HOME is set.
 pub fn configPath(gpa: Allocator, env: *const std.process.Environ.Map) ![]u8 {
     if (env.get("XDG_CONFIG_HOME")) |xdg| if (xdg.len > 0) return std.fs.path.join(gpa, &.{ xdg, "omajot", "config.json" });
-    const home = env.get("HOME") orelse return error.NoHome;
+    if (builtin.os.tag == .windows and env.get("HOME") == null) {
+        if (env.get("APPDATA")) |app| if (app.len > 0) return std.fs.path.join(gpa, &.{ app, "omajot", "config.json" });
+    }
+    const home = homeDir(env) orelse return error.NoHome;
     return std.fs.path.join(gpa, &.{ home, ".config", "omajot", "config.json" });
 }
 
@@ -43,15 +55,20 @@ pub fn readConfig(arena: Allocator, io: Io, path: []const u8) !Config {
 /// Expand a leading `~/` against HOME.
 pub fn expandHome(gpa: Allocator, env: *const std.process.Environ.Map, path: []const u8) ![]u8 {
     if (std.mem.startsWith(u8, path, "~/")) {
-        const home = env.get("HOME") orelse return error.NoHome;
+        const home = homeDir(env) orelse return error.NoHome;
         return std.fs.path.join(gpa, &.{ home, path[2..] });
     }
     return gpa.dupe(u8, path);
 }
 
+/// $XDG_DATA_HOME/omajot, else ~/.local/share/omajot; on Windows
+/// %LOCALAPPDATA%\omajot when neither XDG nor HOME is set.
 pub fn defaultDataDir(gpa: Allocator, env: *const std.process.Environ.Map) ![]u8 {
     if (env.get("XDG_DATA_HOME")) |xdg| if (xdg.len > 0) return std.fs.path.join(gpa, &.{ xdg, "omajot" });
-    const home = env.get("HOME") orelse return error.NoHome;
+    if (builtin.os.tag == .windows and env.get("HOME") == null) {
+        if (env.get("LOCALAPPDATA")) |local| if (local.len > 0) return std.fs.path.join(gpa, &.{ local, "omajot" });
+    }
+    const home = homeDir(env) orelse return error.NoHome;
     return std.fs.path.join(gpa, &.{ home, ".local", "share", "omajot" });
 }
 
@@ -159,4 +176,18 @@ test "resolve: flags win, default socket follows the data directory" {
     _ = env.swapRemove("XDG_RUNTIME_DIR");
     const mac = try resolve(arena, io, &env, .{ .data = "~/d" });
     try testing.expect(std.mem.endsWith(u8, mac.socket, "/d/daemon.sock") or std.mem.indexOf(u8, mac.socket, "omajot-") != null);
+}
+
+test "home falls back to USERPROFILE when HOME is missing (Windows)" {
+    var arena_state: std.heap.ArenaAllocator = .init(testing.allocator);
+    defer arena_state.deinit();
+    const arena = arena_state.allocator();
+    var env: std.process.Environ.Map = .init(arena);
+    try env.put("USERPROFILE", "/Users/someone");
+    if (builtin.os.tag != .windows) {
+        try testing.expectEqualStrings("/Users/someone/.config/omajot/config.json", try configPath(arena, &env));
+        try testing.expectEqualStrings("/Users/someone/.local/share/omajot", try defaultDataDir(arena, &env));
+    }
+    var empty: std.process.Environ.Map = .init(arena);
+    try testing.expectError(error.NoHome, configPath(arena, &empty));
 }

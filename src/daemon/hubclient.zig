@@ -37,7 +37,21 @@ pub const Hub = struct {
     }
 
     /// One request; the whole response body is returned (thread-safe).
+    ///
+    /// Requests reuse a pooled keep-alive connection. The hub (or `tailscale
+    /// serve` in front of it) closes a connection after 60 s idle, and a
+    /// request can race that close: it then fails before any response byte.
+    /// The failed connection leaves the pool, so one retry on a fresh
+    /// connection is enough. Every hub request is idempotent (batches by
+    /// `(replica, bseq)`, blob chunks by offset), so the retry is safe.
     pub fn send(self: *Hub, method: std.http.Method, path: []const u8, payload: ?[]const u8, content_type: ?[]const u8) !Response {
+        return self.sendOnce(method, path, payload, content_type) catch |err| switch (err) {
+            error.HttpConnectionClosing, error.WriteFailed, error.ReadFailed => self.sendOnce(method, path, payload, content_type),
+            else => err,
+        };
+    }
+
+    fn sendOnce(self: *Hub, method: std.http.Method, path: []const u8, payload: ?[]const u8, content_type: ?[]const u8) !Response {
         const url = try std.fmt.allocPrint(self.gpa, "{s}{s}", .{ self.base, path });
         defer self.gpa.free(url);
         var body: Io.Writer.Allocating = .init(self.gpa);

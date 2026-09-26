@@ -69,6 +69,7 @@ pub const overview =
     \\  status                      Show the daemon and the sync state
     \\  qr [url]                    Show the hub address as a QR code
     \\  daemon, hub                 Run the daemon or the hub (see --help)
+    \\  --version                   Print the version
     \\
 ++ addressing ++
     \\

@@ -33,8 +33,21 @@ jobs:
           [ "$zon" = "$want" ] && [ "$manifest" = "$want" ] && [ "$web" = "$want" ] \
             || { echo "::error::run tools/bump-version.sh $want and commit before tagging"; exit 1; }
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
       - name: Test
         run: zig build test
+
+      # The binaries embed web/dist: build it from this commit's sources.
+      - name: Build the web app
+        run: |
+          set -eu
+          zig build wasm
+          cd web
+          npm ci
+          npm run build
 
       - name: Build static binaries
         run: |
@@ -77,6 +90,7 @@ jobs:
           EOF
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -- web/dist   # rebuilt above; main keeps its own copy
           git fetch origin main
           git checkout -B main origin/main
           cp /tmp/release.json release.json
@@ -84,3 +98,32 @@ jobs:
           git add release.json
           git commit -m "Pin the $tag release binaries in release.json"
           git push origin main
+
+      # Formula/omajot.rb in <owner>/homebrew-tap, for `brew install
+      # renerocksai/tap/omajot`. The secret is a deploy key with write access
+      # to the tap repository.
+      - name: Update the Homebrew tap
+        env:
+          TAP_DEPLOY_KEY: ${{ secrets.TAP_DEPLOY_KEY }}
+        run: |
+          set -eu
+          if [ -z "$TAP_DEPLOY_KEY" ]; then
+            echo "::warning::no TAP_DEPLOY_KEY secret: the Homebrew tap was not updated"
+            exit 0
+          fi
+          tag=$GITHUB_REF_NAME
+          key=$RUNNER_TEMP/tap_key
+          printf '%s\n' "$TAP_DEPLOY_KEY" > "$key"
+          chmod 600 "$key"
+          export GIT_SSH_COMMAND="ssh -i $key -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
+          tap=$RUNNER_TEMP/tap
+          git clone "git@github.com:$GITHUB_REPOSITORY_OWNER/homebrew-tap.git" "$tap"
+          mkdir -p "$tap/Formula"
+          tools/homebrew-formula.sh "${tag#v}" release-dist/SHA256SUMS "$GITHUB_REPOSITORY" > "$tap/Formula/omajot.rb"
+          cd "$tap"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Formula/omajot.rb
+          git diff --cached --quiet && { echo "the formula is already up to date"; exit 0; }
+          git commit -m "omajot ${tag#v}"
+          git push origin HEAD

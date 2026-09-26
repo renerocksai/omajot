@@ -264,20 +264,20 @@
 <section id="hub">
   <h2><code>omajot hub</code></h2>
   <p>Runs the hub: it stores all changes, sends them to your devices, stores attachments and serves the web app.</p>
-<pre><code>omajot hub [--port 8787] [--data &lt;dir&gt;] (--login &lt;tailscale login&gt; | --no-auth)
+<pre><code>omajot hub [--port 8787] [--data &lt;dir&gt;] [--login &lt;tailscale login&gt; | --no-auth]
            [--web &lt;dir&gt;] [--bind 127.0.0.1] [--url &lt;public url&gt;] [--timeout-ms N]</code></pre>
   <div class="table"><table>
     <tr><th>Flag</th><th>Default</th><th>Meaning</th></tr>
-    <tr><td><code>--port</code></td><td><code>8787</code></td><td>The port on the bind address.</td></tr>
-    <tr><td><code>--data</code></td><td><code>./omajot-data</code></td><td>The folder for <code>batches.jsonl</code> (all changes) and <code>blobs/</code> (attachments).</td></tr>
-    <tr><td><code>--login</code></td><td>none</td><td>Only requests with this <code>Tailscale-User-Login</code> header may use <code>/api/*</code>. <code>tailscale serve</code> sets the header.</td></tr>
+    <tr><td><code>--port</code></td><td><code>hub_port</code> in the config file, else <code>8787</code></td><td>The port on the bind address.</td></tr>
+    <tr><td><code>--data</code></td><td><code>hub_data</code> in the config file, else <code>~/omajot-data</code></td><td>The folder for <code>batches.jsonl</code> (all changes) and <code>blobs/</code> (attachments).</td></tr>
+    <tr><td><code>--login</code></td><td><code>hub_login</code> in the config file</td><td>Only requests with this <code>Tailscale-User-Login</code> header may use <code>/api/*</code>. <code>tailscale serve</code> sets the header.</td></tr>
     <tr><td><code>--no-auth</code></td><td>off</td><td>No login check, for local tests. The hub refuses to start with it on an address other than loopback.</td></tr>
-    <tr><td><code>--web</code></td><td><code>web/dist</code> of the checkout</td><td>The web app to serve.</td></tr>
+    <tr><td><code>--web</code></td><td>the web app in the binary</td><td>Serve the web app from this folder instead, for example <code>web/dist</code> while you work on it. The hub reads the folder when it starts.</td></tr>
     <tr><td><code>--bind</code></td><td><code>127.0.0.1</code></td><td>The IPv4 address to listen on. Keep loopback when you use <code>tailscale serve</code>.</td></tr>
     <tr><td><code>--url</code></td><td>from <code>tailscale serve status</code></td><td>The URL for phones. The hub prints it with a QR code when it starts.</td></tr>
     <tr><td><code>--timeout-ms</code></td><td><code>{{num:src/hub/hub.zig:request_timeout_ms}}</code></td><td>The deadline for normal requests, in milliseconds. The event stream has its own deadline of {{ms:src/hub/hub.zig:sse_timeout_ms}} and ends cleanly {{ms:src/hub/hub.zig:sse_margin_ms}} before it.</td></tr>
   </table></div>
-  <p>Give exactly one of <code>--login</code> and <code>--no-auth</code>. Stop the hub with <kbd>Ctrl</kbd>+<kbd>C</kbd>: it finishes the open requests first.</p>
+  <p>The hub needs a login (<code>--login</code> or <code>hub_login</code>) or <code>--no-auth</code>. <code>--no-auth</code> ignores <code>hub_login</code>. With the config file, a plain <code>omajot hub</code> is enough, also for a service. Stop the hub with <kbd>Ctrl</kbd>+<kbd>C</kbd>: it finishes the open requests first.</p>
 </section>
 
 <section id="daemon">
@@ -325,8 +325,12 @@
 <pre><code>{
   "hub": "https://your-mac.your-tailnet.ts.net:8443",
   "data": "~/.local/share/omajot",
-  "socket": "/run/user/1000/omajot.sock"
+  "socket": "/run/user/1000/omajot.sock",
+  "hub_login": "you@example.com",
+  "hub_port": 8787,
+  "hub_data": "~/omajot-data"
 }</code></pre>
+  <p><code>hub</code>, <code>data</code> and <code>socket</code> are for the daemon, the plugin and the note commands. <code>hub_login</code>, <code>hub_port</code> and <code>hub_data</code> are for <code>omajot hub</code> on the hub computer; its flags win over them.</p>
   <p>omajot uses the first value it finds:</p>
   <ol>
     <li>the command-line flag (<code>--hub</code>, <code>--data</code>, <code>--socket</code>),</li>

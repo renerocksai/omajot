@@ -107,14 +107,36 @@ all details.
 Web app only (no Omarchy): do steps 1, 2 and 5. With the Omarchy plugin: do
 steps 1 to 5.
 
-**1. Run the hub** on the computer that is always on (macOS or Linux):
+**1. Run the hub** on the computer that is always on (macOS or Linux).
+Install omajot with Homebrew:
 
 ```sh
-git clone https://github.com/renerocksai/omajot && cd omajot
-tools/install-release.sh
-tmux new -s omajot-hub
-bin/omajot hub --port 8787 --data ~/omajot-data --login you@example.com
+brew install renerocksai/tap/omajot
 ```
+
+or, on Linux without Homebrew:
+
+```sh
+git clone https://github.com/renerocksai/omajot ~/omajot && ~/omajot/tools/install-release.sh
+```
+
+Put your Tailscale login name in `~/.config/omajot/config.json` (add the key
+if the file exists already):
+
+```json
+{ "hub_login": "you@example.com" }
+```
+
+Then start the hub:
+
+```sh
+tmux new -s omajot-hub
+omajot hub
+```
+
+The hub listens on `127.0.0.1:8787` and keeps the notes in `~/omajot-data`.
+The web app is built into the binary. With Homebrew,
+`brew services start omajot` runs the hub as a service instead of tmux.
 
 The `tmux` line is optional: tmux keeps the hub running after you close the
 terminal. Omarchy includes tmux; on a Mac, install it with `brew install tmux`.
@@ -126,8 +148,8 @@ has more, and shows how to run the hub as a service that starts at boot
 
 `tools/install-release.sh` downloads the released binary for this computer. It
 checks the SHA-256 against `release.json` in the repository before it installs
-the binary into `bin/omajot`. Replace `you@example.com` with your Tailscale
-login name. On Windows (experimental), download `omajot-x86_64-windows.exe`
+the binary into `bin/omajot` and links `~/.local/bin/omajot` to it. Replace
+`you@example.com` with your Tailscale login name. On Windows (experimental), download `omajot-x86_64-windows.exe`
 from the [releases](https://github.com/renerocksai/omajot/releases).
 
 **2. Publish it on your tailnet**, on the same computer:
@@ -226,7 +248,7 @@ at the same time stays.
 | `omajot export <dir>` | Writes every note as `Folder/Title.md`, with its attachments. |
 | `omajot status` | Shows the daemon, the data folder and the sync state. |
 | `omajot tui` | Browse, search and edit your notes in the terminal: folders and tags, the notes, the note. Edits go through `$VISUAL`/`$EDITOR`. |
-| `omajot hub --login <you> [--port 8787] [--data <dir>] [--url <url>]` | Runs the hub. Prints its phone URL and a QR code at start. |
+| `omajot hub [--login <you>] [--port 8787] [--data <dir>] [--url <url>]` | Runs the hub and serves the web app. Defaults come from `hub_login`, `hub_port` and `hub_data` in the config file. Prints its phone URL and a QR code at start. |
 | `omajot daemon [--hub <url> \| --no-hub] [--data <dir>] [--socket <path>]` | The local copy that the plugin and the commands use. |
 | `omajot qr [url]` | Prints a URL (default: your hub) as a QR code in the terminal. |
 
@@ -287,7 +309,9 @@ cd web && npm ci && npm run build && npm test && npm run e2e
 python3 tools/build_site.py   # the documentation site, into _site/
 ```
 
-`web/dist/` is committed, so the hub needs no Node.js to serve the web app.
+`web/dist/` is committed, so `zig build` needs no Node.js. The build embeds it
+into the binary; `omajot hub --web web/dist` serves the folder instead while
+you work on the web app.
 
 ## Documentation
 

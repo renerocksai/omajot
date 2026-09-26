@@ -50,6 +50,13 @@ pub fn main(init: std.process.Init) !void {
         try out.interface.flush();
         return;
     }
+    if (eql(u8, first, "--version") or eql(u8, first, "version")) {
+        var buf: [64]u8 = undefined;
+        var out = std.Io.File.stdout().writer(init.io, &buf);
+        try out.interface.print("omajot {s}\n", .{@import("core").engine.version});
+        try out.interface.flush();
+        return;
+    }
     if (eql(u8, first, "hub")) return hub.main(init, rest);
     if (eql(u8, first, "daemon")) return daemon.main(init, rest);
     if (eql(u8, first, "qr")) return qrcli.main(init, rest);

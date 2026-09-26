@@ -1,5 +1,6 @@
-//! The PWA's files, read once at startup and served from memory with baz's
-//! borrowBody (the bytes live as long as the hub). `web/dist` is small.
+//! The PWA's files, served from memory with baz's borrowBody (the bytes live
+//! as long as the hub). The binary carries a copy of `web/dist` (build.zig
+//! embeds it); `--web <dir>` reads a directory at startup instead.
 const std = @import("std");
 const Io = std.Io;
 const Allocator = std.mem.Allocator;
@@ -9,6 +10,9 @@ pub const max_file_bytes: usize = 32 << 20;
 pub const max_total_bytes: usize = 128 << 20;
 
 pub const Asset = struct { body: []const u8, content_type: []const u8 };
+
+/// One file of the embedded web app; `path` is relative, with `/` separators.
+pub const Embedded = struct { path: []const u8, body: []const u8 };
 
 pub const Assets = struct {
     arena: std.heap.ArenaAllocator,
@@ -42,6 +46,19 @@ pub const Assets = struct {
             // Windows-style separators never appear in URLs.
             std.mem.replaceScalar(u8, url, '\\', '/');
             try self.map.put(arena, url, .{ .body = body, .content_type = contentType(url) });
+        }
+        return self;
+    }
+
+    /// The web app built into the binary. The bodies are not copied.
+    pub fn fromEmbedded(gpa: Allocator, files: []const Embedded) !Assets {
+        var self: Assets = .{ .arena = .init(gpa), .root = "(built in)" };
+        errdefer self.arena.deinit();
+        const arena = self.arena.allocator();
+        for (files) |file| {
+            if (std.mem.startsWith(u8, std.fs.path.basename(file.path), ".")) continue;
+            const url = try std.fmt.allocPrint(arena, "/{s}", .{file.path});
+            try self.map.put(arena, url, .{ .body = file.body, .content_type = contentType(url) });
         }
         return self;
     }
@@ -105,4 +122,16 @@ test "load and lookup, including SPA fallback and content types" {
     try testing.expectEqualStrings("<!doctype html>", assets.lookup("/notes/some-id").?.body);
     try testing.expect(assets.lookup("/missing.js") == null);
     try testing.expect(assets.lookup("/.hidden") == null);
+}
+
+test "fromEmbedded" {
+    var assets = try Assets.fromEmbedded(std.testing.allocator, &.{
+        .{ .path = "index.html", .body = "<html>" },
+        .{ .path = "icons/icon.svg", .body = "<svg/>" },
+        .{ .path = ".DS_Store", .body = "x" },
+    });
+    defer assets.deinit();
+    try std.testing.expectEqualStrings("<html>", assets.lookup("/").?.body);
+    try std.testing.expectEqualStrings("image/svg+xml", assets.lookup("/icons/icon.svg").?.content_type);
+    try std.testing.expect(assets.lookup("/.DS_Store") == null);
 }

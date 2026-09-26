@@ -23,6 +23,10 @@ pub const Config = struct {
     hub: ?[]const u8 = null,
     data: ?[]const u8 = null,
     socket: ?[]const u8 = null,
+    /// Defaults for `omajot hub` on the hub computer (its flags win).
+    hub_login: ?[]const u8 = null,
+    hub_port: ?u16 = null,
+    hub_data: ?[]const u8 = null,
 };
 
 /// The user's home: $HOME, else %USERPROFILE% (Windows usually has no HOME).

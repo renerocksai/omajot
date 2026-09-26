@@ -23,7 +23,7 @@
   <ul>
     <li>A computer that is always on, for the hub. macOS and Linux work. Windows is experimental. A Mac mini, a home server or a small VPS is a good choice.</li>
     <li>A Tailscale account. <a href="https://tailscale.com">Tailscale</a> is free for personal use.</li>
-    <li><code>curl</code> and Python 3 for <code>tools/install-release.sh</code>.</li>
+    <li>On macOS: <a href="https://brew.sh">Homebrew</a>. On Linux: Homebrew, or <code>curl</code> and Python 3 for <code>tools/install-release.sh</code>.</li>
     <li>For the plugin: an Omarchy desktop. The plugin is optional: the web app is a complete client.</li>
     <li>No compiler. If you want to build omajot yourself, see <a href="#source">Build from source</a>.</li>
   </ul>
@@ -43,15 +43,21 @@
 <section id="hub">
   <h2>1 · Run the hub <span class="badge hub">Hub computer</span></h2>
   <p>The hub stores all changes and sends them to your devices. It also serves the web app. Do these steps on the computer that is always on.</p>
-<pre class="cmd"><code><span class="p">$ </span>git clone https://github.com/renerocksai/omajot && cd omajot
-<span class="p">$ </span>tools/install-release.sh
-<span class="p">$ </span>tmux new -s omajot-hub
-<span class="p">$ </span>bin/omajot hub --port 8787 --data ~/omajot-data --login you@example.com</code></pre>
-  <p><code>tools/install-release.sh</code> downloads the released binary for this computer from the GitHub release. It checks the SHA-256 of the file against <code>release.json</code>, which is in the repository. Then it installs the binary into <code>bin/omajot</code>. It also links <code>~/.local/bin/omajot</code> to it, so <code>omajot</code> works from any folder (it tells you if <code>~/.local/bin</code> is not on your <code>PATH</code>). If there is no release yet, <a href="#source">build from source</a>.</p>
-  <p>On Windows (experimental), download <code>omajot-x86_64-windows.exe</code> from the <a href="https://github.com/renerocksai/omajot/releases">releases</a>. The Windows binary builds on the IOCP backend of bounded/http. We did not run it as a hub yet.</p>
-  <p>Replace <code>you@example.com</code> with your Tailscale login name. The Tailscale admin console shows it on the <em>Users</em> page. The hub accepts API requests only from this login.</p>
-  <p>The hub listens on <code>127.0.0.1</code> only. It writes all changes to <code>~/omajot-data/batches.jsonl</code> and all images to <code>~/omajot-data/blobs/</code>. Include this folder in your backups.</p>
-  <p>The <code>tmux</code> line is optional. tmux keeps the hub running when you close the terminal window. You can also use another tool for this, or keep a terminal window open.</p>
+  <p><strong>Install omajot.</strong> On macOS, use Homebrew. On Linux, use Homebrew or the install script.</p>
+  <div class="table"><table>
+    <tr><th>Computer</th><th>Command</th></tr>
+    <tr><td>macOS, or Linux with Homebrew</td><td><code>brew install renerocksai/tap/omajot</code></td></tr>
+    <tr><td>Linux without Homebrew</td><td><code>git clone https://github.com/renerocksai/omajot ~/omajot &amp;&amp; ~/omajot/tools/install-release.sh</code></td></tr>
+  </table></div>
+  <p>Homebrew installs the released binary for this computer. <code>tools/install-release.sh</code> downloads it from the GitHub release and checks its SHA-256 against <code>release.json</code> in the repository. It installs the binary into <code>~/omajot/bin/omajot</code> and links <code>~/.local/bin/omajot</code> to it, so <code>omajot</code> works from any folder. It tells you if <code>~/.local/bin</code> is not on your <code>PATH</code>.</p>
+  <p><strong>Tell the hub your login.</strong> Make the file <code>~/.config/omajot/config.json</code>, or add the key if the file exists already. Replace <code>you@example.com</code> with your Tailscale login name. The Tailscale admin console shows it on the <em>Users</em> page. The hub accepts API requests only from this login.</p>
+<pre><code>{ "hub_login": "you@example.com" }</code></pre>
+  <p><strong>Start the hub:</strong></p>
+<pre class="cmd"><code><span class="p">$ </span>tmux new -s omajot-hub
+<span class="p">$ </span>omajot hub</code></pre>
+  <p>The hub listens on <code>127.0.0.1:8787</code> only. It writes all changes to <code>~/omajot-data/batches.jsonl</code> and all images to <code>~/omajot-data/blobs/</code>. Include this folder in your backups. The web app is in the omajot binary. To use other values, add <code>"hub_port"</code> or <code>"hub_data"</code> to the config file, or use the flags <code>--login</code>, <code>--port</code> and <code>--data</code> (see <a href="cli.html#hub">omajot hub</a>).</p>
+  <p>The <code>tmux</code> line is optional. tmux keeps the hub running when you close the terminal window. You can also use another tool for this, or keep a terminal window open. With Homebrew, you can also start the hub as a service now: see <a href="#boot">Start the hub at boot</a>.</p>
+  <p>On Windows (experimental), download <code>omajot-x86_64-windows.exe</code> from the <a href="https://github.com/renerocksai/omajot/releases">releases</a>. The Windows binary builds on the IOCP backend of bounded/http. We did not run it as a hub yet. If there is no release for your computer, <a href="#source">build from source</a>.</p>
   <details id="tmux">
     <summary>tmux: install it, detach, and come back later</summary>
     <p><strong>Install tmux</strong> if your computer does not have it:</p>
@@ -77,19 +83,31 @@
 
   <details id="boot">
     <summary>Later: start the hub at boot, as a service</summary>
-    <p>When the hub runs well in tmux, you can make it a service. Then it starts when the computer starts, and it restarts after a crash. Stop the hub in tmux first: only one hub may use the data folder.</p>
+    <p>When the hub runs well in tmux, you can make it a service. Then it starts when the computer starts, and it restarts after a crash. Stop the hub in tmux first: only one hub may use the data folder. The service reads your login from <code>~/.config/omajot/config.json</code> (step 1).</p>
 
-    <h3>Omarchy</h3>
+    <h3>macOS, or Linux with Homebrew</h3>
+<pre class="cmd"><code><span class="p">$ </span>brew services start omajot
+<span class="p">$ </span>tailscale serve --bg --https=8443 http://127.0.0.1:8787</code></pre>
+    <div class="table"><table>
+      <tr><th>To do this</th><th>Command</th></tr>
+      <tr><td>See if the hub runs</td><td><code>brew services info omajot</code></td></tr>
+      <tr><td>Read its output (also the QR code)</td><td><code>tail -f "$(brew --prefix)/var/log/omajot-hub.log"</code></td></tr>
+      <tr><td>Update the hub</td><td><code>brew upgrade omajot &amp;&amp; brew services restart omajot</code></td></tr>
+      <tr><td>Stop it and do not start it again</td><td><code>brew services stop omajot</code></td></tr>
+    </table></div>
+    <p>On macOS, the service starts at login. The Tailscale app for macOS also runs only when a user is logged in. On a Mac without a screen, turn on automatic login: <em>System Settings → Users &amp; Groups → Automatically log in as</em>.</p>
+
+    <h3>Omarchy, without Homebrew</h3>
     <ol>
       <li><p>Install Tailscale as a service. It then starts at boot, and you can run <code>tailscale serve</code> without sudo:</p>
 <pre class="cmd"><code><span class="p">$ </span>omarchy install service tailscale</code></pre></li>
-      <li><p>Make the file <code>~/.config/systemd/user/omajot-hub.service</code> with this text. Replace <code>you@example.com</code> with your Tailscale login name. <code>%h</code> is your home folder.</p>
+      <li><p>Make the file <code>~/.config/systemd/user/omajot-hub.service</code> with this text. <code>%h</code> is your home folder.</p>
 <pre><code>[Unit]
 Description=omajot hub
 After=network-online.target
 
 [Service]
-ExecStart=%h/omajot/bin/omajot hub --port 8787 --data %h/omajot-data --login you@example.com
+ExecStart=%h/omajot/bin/omajot hub
 Restart=on-failure
 RestartSec=5
 
@@ -112,7 +130,7 @@ WantedBy=default.target</code></pre></li>
     </table></div>
     <p>This works the same on other Linux computers with systemd. Install Tailscale with their package manager, and run <code>sudo systemctl enable --now tailscaled</code> and <code>sudo tailscale set --operator=$USER</code>.</p>
 
-    <h3>macOS</h3>
+    <h3>macOS, without Homebrew</h3>
     <ol>
       <li><p>Make the file <code>~/Library/LaunchAgents/io.github.renerocksai.omajot-hub.plist</code>. Use full paths: launchd does not know <code>~</code>. Replace <code>you</code> with your user name.</p>
 <pre><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
@@ -121,9 +139,6 @@ WantedBy=default.target</code></pre></li>
   &lt;key&gt;Label&lt;/key&gt;&lt;string&gt;io.github.renerocksai.omajot-hub&lt;/string&gt;
   &lt;key&gt;ProgramArguments&lt;/key&gt;&lt;array&gt;
     &lt;string&gt;/Users/you/omajot/bin/omajot&lt;/string&gt;&lt;string&gt;hub&lt;/string&gt;
-    &lt;string&gt;--port&lt;/string&gt;&lt;string&gt;8787&lt;/string&gt;
-    &lt;string&gt;--data&lt;/string&gt;&lt;string&gt;/Users/you/omajot-data&lt;/string&gt;
-    &lt;string&gt;--login&lt;/string&gt;&lt;string&gt;you@example.com&lt;/string&gt;
   &lt;/array&gt;
   &lt;key&gt;RunAtLoad&lt;/key&gt;&lt;true/&gt;
   &lt;key&gt;KeepAlive&lt;/key&gt;&lt;true/&gt;
@@ -134,10 +149,9 @@ WantedBy=default.target</code></pre></li>
 <pre class="cmd"><code><span class="p">$ </span>launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/io.github.renerocksai.omajot-hub.plist</code></pre></li>
     </ol>
     <p>Read the output with <code>tail -f ~/omajot-data/hub.log</code>. Stop the service with <code>launchctl bootout gui/$(id -u)/io.github.renerocksai.omajot-hub</code>. After a crash, launchd starts the hub again after about 10 seconds.</p>
-    <p>A LaunchAgent starts at login. The Tailscale app for macOS also runs only when a user is logged in. On a Mac without a screen, turn on automatic login: <em>System Settings → Users &amp; Groups → Automatically log in as</em>.</p>
 
     <h3>Windows (experimental)</h3>
-    <p>Use the Task Scheduler. Make a task with the trigger <em>At startup</em>, the action <em>Start a program</em> with <code>omajot-x86_64-windows.exe</code> and the hub arguments, and the option <em>Run whether user is logged on or not</em>. We did not test the hub on Windows yet.</p>
+    <p>Use the Task Scheduler. Make a task with the trigger <em>At startup</em>, the action <em>Start a program</em> with <code>omajot-x86_64-windows.exe</code> and the argument <code>hub</code>, and the option <em>Run whether user is logged on or not</em>. We did not test the hub on Windows yet.</p>
 
     <h3>Tips</h3>
     <ul>
@@ -245,10 +259,12 @@ WantedBy=default.target</code></pre></li>
 
 <section id="update">
   <h2>Update the hub <span class="badge hub">Hub computer</span></h2>
-  <p>In your omajot clone on the hub computer:</p>
+  <p>With Homebrew:</p>
+<pre class="cmd"><code><span class="p">$ </span>brew upgrade omajot</code></pre>
+  <p>Without Homebrew, in your omajot clone on the hub computer:</p>
 <pre class="cmd"><code><span class="p">$ </span>cd ~/omajot && git pull
 <span class="p">$ </span>tools/install-release.sh</code></pre>
-  <p>Then restart the hub: in its tmux session, press <kbd>Ctrl</kbd>+<kbd>c</kbd> and start it again. As a service, use <code>systemctl --user restart omajot-hub</code> or the launchd commands in <a href="#boot">start at boot</a>. The hub also serves the web app, so the browsers and phones get the new web app from it. <code>tools/install-release.sh</code> downloads a binary only if <code>bin/omajot</code> does not match the release in <code>release.json</code>. If you build from source, run <code>zig build -Doptimize=ReleaseSafe</code> instead.</p>
+  <p>Then restart the hub: in its tmux session, press <kbd>Ctrl</kbd>+<kbd>c</kbd> and start it again. As a service, use <code>brew services restart omajot</code>, <code>systemctl --user restart omajot-hub</code> or the launchd commands in <a href="#boot">start at boot</a>. The web app is in the omajot binary, so the browsers and phones get the new web app from the new hub. <code>tools/install-release.sh</code> downloads a binary only if <code>bin/omajot</code> does not match the release in <code>release.json</code>. If you build from source, run <code>zig build -Doptimize=ReleaseSafe</code> instead.</p>
 
   <h2>Update the plugin <span class="badge omarchy">Omarchy only</span></h2>
   <p>On your Omarchy computer. The plugin folder is the one that <code>omarchy plugin add</code> made:</p>

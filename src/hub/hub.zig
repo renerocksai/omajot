@@ -15,6 +15,8 @@ pub const static = @import("static.zig");
 pub const rawjson = @import("rawjson.zig");
 pub const tsurl = @import("tsurl.zig");
 const qrcli = @import("../qrcli.zig");
+const paths = @import("../daemon/paths.zig");
+const web_assets = @import("web_assets");
 
 // Explicit limits. See also store.max_* and blobs.max_blob_bytes.
 pub const max_subscribers = 64;
@@ -38,13 +40,17 @@ pub const heartbeat_ms: u32 = 15_000;
 pub const max_body: u32 = @intCast(@max(store.max_batch_bytes, blobs.max_chunk_bytes));
 
 const usage =
-    \\usage: omajot hub [--port 8787] [--data <dir>] (--login <tailscale login> | --no-auth)
+    \\usage: omajot hub [--port 8787] [--data <dir>] [--login <tailscale login> | --no-auth]
     \\                  [--web <dir>] [--bind 127.0.0.1] [--url <public url>]
     \\
     \\  --login    only requests whose Tailscale-User-Login equals this may use /api/*
+    \\           (default: "hub_login" in config.json; one of the two is required)
     \\  --no-auth  skip the identity check (local development; loopback only)
-    \\  --data     batches.jsonl and blobs/ live here (default: ./omajot-data)
-    \\  --web      the PWA to serve (default: web/dist of this checkout, if present)
+    \\  --port     default: "hub_port" in config.json, else 8787
+    \\  --data     batches.jsonl and blobs/ live here
+    \\           (default: "hub_data" in config.json, else ~/omajot-data)
+    \\  --web      serve the web app from this directory (default: the copy of
+    \\           web/dist built into omajot)
     \\  --timeout-ms  deadline for ordinary requests (default 30000); the SSE route has
     \\           its own 10-minute deadline and its streams end cleanly before it
     \\  --url    the URL phones use, printed with a QR code at startup
@@ -376,7 +382,8 @@ fn notFound(ctx: *Context) !void {
 const Options = struct {
     port: u16 = 8787,
     bind: [4]u8 = .{ 127, 0, 0, 1 },
-    data: []const u8 = "omajot-data",
+    /// A leading `~/` is expanded against HOME in main.
+    data: []const u8 = default_data,
     login: ?[]const u8 = null,
     no_auth: bool = false,
     web_dir: ?[]const u8 = null,
@@ -384,8 +391,16 @@ const Options = struct {
     url: ?[]const u8 = null,
 };
 
-fn parseOptions(args: []const []const u8) !Options {
-    var options: Options = .{};
+const default_data = "~/omajot-data";
+
+/// Flags win over `hub_login`, `hub_port` and `hub_data` in config.json, so a
+/// service manager can run a plain `omajot hub`.
+fn parseOptions(args: []const []const u8, config: paths.Config) !Options {
+    var options: Options = .{
+        .port = config.hub_port orelse 8787,
+        .data = config.hub_data orelse default_data,
+    };
+    var flag_login = false;
     var i: usize = 0;
     while (i < args.len) : (i += 1) {
         const arg = args[i];
@@ -413,6 +428,7 @@ fn parseOptions(args: []const []const u8) !Options {
             options.data = v;
         } else if (std.mem.eql(u8, name, "--login")) {
             options.login = v;
+            flag_login = true;
         } else if (std.mem.eql(u8, name, "--web")) {
             options.web_dir = v;
         } else if (std.mem.eql(u8, name, "--url")) {
@@ -422,6 +438,9 @@ fn parseOptions(args: []const []const u8) !Options {
             if (options.timeout_ms < 2000) return error.TimeoutTooShort;
         } else return error.UnknownOption;
     }
+    if (options.no_auth and flag_login) return error.NeedLoginOrNoAuth;
+    // --no-auth on the command line overrides a login from the config file.
+    if (!options.no_auth and options.login == null) options.login = config.hub_login;
     if (options.no_auth == (options.login != null)) return error.NeedLoginOrNoAuth;
     if (options.no_auth and options.bind[0] != 127) return error.NoAuthRequiresLoopback;
     return options;
@@ -448,17 +467,12 @@ fn printPhoneUrl(gpa: Allocator, io: Io, explicit: ?[]const u8, port: u16) void 
     std.debug.print("{s}\n", .{aw.buffered()});
 }
 
-/// `<repo>/web/dist` when this binary is `<repo>/zig-out/bin/omajot`.
-fn defaultWebDir(io: Io, gpa: Allocator) !?[]u8 {
-    const exe_dir = std.process.executableDirPathAlloc(io, gpa) catch return null;
-    defer gpa.free(exe_dir);
-    const candidate = try std.fs.path.join(gpa, &.{ exe_dir, "..", "..", "web", "dist" });
-    Io.Dir.cwd().access(io, candidate, .{}) catch {
-        gpa.free(candidate);
-        return null;
-    };
-    return candidate;
-}
+/// web/dist, embedded by build.zig.
+const embedded_web = blk: {
+    var list: [web_assets.files.len]static.Embedded = undefined;
+    for (web_assets.files, 0..) |f, i| list[i] = .{ .path = f.path, .body = f.body };
+    break :blk list;
+};
 
 var stop_target: std.atomic.Value(?*Application) = .init(null);
 
@@ -469,10 +483,24 @@ fn onSignal(_: std.posix.SIG) callconv(.c) void {
 pub fn main(init: std.process.Init, args: []const []const u8) !void {
     const io = init.io;
     const gpa = init.gpa;
-    const options = parseOptions(args) catch |err| {
+    var config_arena: std.heap.ArenaAllocator = .init(gpa);
+    defer config_arena.deinit();
+    const arena = config_arena.allocator();
+    const config_path = paths.configPath(arena, init.environ_map) catch "";
+    const config: paths.Config = if (config_path.len == 0) .{} else paths.readConfig(arena, io, config_path) catch |err| {
+        std.debug.print("omajot hub: cannot read {s}: {s}\n", .{ config_path, @errorName(err) });
+        std.process.exit(2);
+    };
+    var options = parseOptions(args, config) catch |err| {
         if (err != error.Help) std.debug.print("omajot hub: {s}\n", .{@errorName(err)});
+        if (err == error.NeedLoginOrNoAuth)
+            std.debug.print("omajot hub: pass --login <tailscale login>, or set \"hub_login\" in {s}\n", .{config_path});
         std.debug.print("{s}", .{usage});
         std.process.exit(if (err == error.Help) 0 else 2);
+    };
+    options.data = paths.expandHome(arena, init.environ_map, options.data) catch |err| {
+        std.debug.print("omajot hub: cannot find the data directory {s}: {s}\n", .{ options.data, @errorName(err) });
+        std.process.exit(2);
     };
 
     try Io.Dir.cwd().createDirPath(io, options.data);
@@ -482,16 +510,10 @@ pub fn main(init: std.process.Init, args: []const []const u8) !void {
     var blob_dir = try data_dir.openDir(io, blobs.dir_name, .{});
     defer blob_dir.close(io);
 
-    var owned_web: ?[]u8 = null;
-    defer if (owned_web) |w| gpa.free(w);
-    const web_dir: ?[]const u8 = options.web_dir orelse blk: {
-        owned_web = try defaultWebDir(io, gpa);
-        break :blk owned_web;
-    };
-    var assets = if (web_dir) |dir| static.Assets.load(gpa, io, dir) catch |err| {
+    var assets = if (options.web_dir) |dir| static.Assets.load(gpa, io, dir) catch |err| {
         std.debug.print("omajot hub: cannot load web dir {s}: {s}\n", .{ dir, @errorName(err) });
         return err;
-    } else static.Assets.empty(gpa);
+    } else try static.Assets.fromEmbedded(gpa, &embedded_web);
     defer assets.deinit();
 
     const shared = try gpa.create(Shared);
@@ -552,7 +574,7 @@ pub fn main(init: std.process.Init, args: []const []const u8) !void {
     }
     std.debug.print("omajot hub READY port={d} backend={s} data={s} head={d} web={s} auth={s}\n", .{
         app.port(),              web.backend_name,                        options.data,
-        shared.log.head(),       web_dir orelse "(none)",                 options.login orelse "OFF (--no-auth)",
+        shared.log.head(),       assets.root,                 options.login orelse "OFF (--no-auth)",
     });
     printPhoneUrl(gpa, io, options.url, app.port());
     app.run() catch |err| {
@@ -571,11 +593,27 @@ test {
 }
 
 test "parseOptions" {
-    const o = try parseOptions(&.{ "--port", "9000", "--login=me@x", "--data", "/tmp/d" });
+    const o = try parseOptions(&.{ "--port", "9000", "--login=me@x", "--data", "/tmp/d" }, .{});
     try std.testing.expectEqual(@as(u16, 9000), o.port);
     try std.testing.expectEqualStrings("me@x", o.login.?);
-    try std.testing.expectError(error.NeedLoginOrNoAuth, parseOptions(&.{}));
-    try std.testing.expectError(error.NeedLoginOrNoAuth, parseOptions(&.{ "--no-auth", "--login", "x" }));
-    try std.testing.expectError(error.NoAuthRequiresLoopback, parseOptions(&.{ "--no-auth", "--bind", "0.0.0.0" }));
-    _ = try parseOptions(&.{"--no-auth"});
+    try std.testing.expectError(error.NeedLoginOrNoAuth, parseOptions(&.{}, .{}));
+    try std.testing.expectError(error.NeedLoginOrNoAuth, parseOptions(&.{ "--no-auth", "--login", "x" }, .{}));
+    try std.testing.expectError(error.NoAuthRequiresLoopback, parseOptions(&.{ "--no-auth", "--bind", "0.0.0.0" }, .{}));
+    const local = try parseOptions(&.{"--no-auth"}, .{});
+    try std.testing.expectEqualStrings(default_data, local.data);
+    try std.testing.expectEqual(@as(u16, 8787), local.port);
+}
+
+test "parseOptions: config.json supplies defaults, flags win" {
+    const config: paths.Config = .{ .hub_login = "me@x", .hub_port = 9100, .hub_data = "~/notes-hub" };
+    const plain = try parseOptions(&.{}, config);
+    try std.testing.expectEqualStrings("me@x", plain.login.?);
+    try std.testing.expectEqual(@as(u16, 9100), plain.port);
+    try std.testing.expectEqualStrings("~/notes-hub", plain.data);
+    const flags = try parseOptions(&.{ "--port", "9000", "--login", "you@x", "--data", "/d" }, config);
+    try std.testing.expectEqualStrings("you@x", flags.login.?);
+    try std.testing.expectEqual(@as(u16, 9000), flags.port);
+    try std.testing.expectEqualStrings("/d", flags.data);
+    const local = try parseOptions(&.{"--no-auth"}, config);
+    try std.testing.expect(local.login == null);
 }

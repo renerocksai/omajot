@@ -378,6 +378,24 @@ For a hub that must survive reboots without a login:
   them. Editing uses `$EDITOR` (nvim): each save is applied as a diff against the
   opened version, the same code path as `omajot edit`.
 
+## Homebrew and a self-contained hub (decided 2026-09-26)
+
+- **The web app is in the binary.** build.zig embeds the committed `web/dist`
+  (the release workflow rebuilds it from the tagged sources first), so a release
+  or Homebrew binary serves the PWA with no files next to it. Before, the hub
+  looked for `<exe>/../../web/dist`, which only exists in a checkout's
+  `zig-out/bin`: the documented `bin/omajot hub` served no web app. `--web <dir>`
+  still serves a directory (web development).
+- **Hub defaults from config.json:** `hub_login`, `hub_port` (8787) and
+  `hub_data` (`~/omajot-data`, no longer relative to the working directory);
+  flags win, `--no-auth` ignores `hub_login`. A service manager runs a plain
+  `omajot hub`.
+- **Tap:** `renerocksai/homebrew-tap`, `Formula/omajot.rb` (release binaries
+  for macOS and Linux, arm and Intel; `service do` runs the hub for
+  `brew services`). `tools/homebrew-formula.sh` generates it from SHA256SUMS; the
+  release workflow pushes it with a deploy key (secret `TAP_DEPLOY_KEY`).
+- `omajot --version`.
+
 ## Known follow-ups (first build, 2026-09-25)
 
 - **Engine idle deadline**: bounded/http counts keep-alive idle time toward the next
@@ -386,7 +404,8 @@ For a hub that must survive reboots without a login:
 - **Upload memory**: bounded/http reserves 2 × `max_body` per connection, so bodies are
   capped at 1 MiB and blobs are chunked. Streaming request bodies upstream would lift that.
 - **No permanent delete / empty trash** in the protocol yet.
-- **Hub reads `--web` only at startup**: every PWA deploy needs a hub restart (reload on SIGHUP?).
+- **The web app ships with the binary**: a PWA change needs a new build and a hub
+  restart (`--web` reads its directory only at startup).
 - **Engine**: split very large inserts so an ops array always fits in a 1 MiB batch;
   RGA → Fugue to avoid interleaving; counted tree for O(log n) position lookup.
 - **PWA**: remote images in pasted HTML stay links (CORS); Add-to-Home-Screen and the
@@ -394,7 +413,7 @@ For a hub that must survive reboots without a login:
   setext headings, hard breaks, parenthesised URLs; `app.js` 555 → 372 KiB.)
 - **Plugin**: keyboard-driven checks still to do by hand: a main-window session, Ctrl+V,
   preview checkbox clicks, Ctrl+B/I, folder rename/move/delete, images in the preview.
-- **Hub**: snapshots/compaction, start at boot.
+- **Hub**: snapshots/compaction. (Start at boot: documented, and `brew services`.)
 
 ## Open questions
 

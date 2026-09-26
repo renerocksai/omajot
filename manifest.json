@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "io.github.renerocksai.omajot",
   "name": "omajot",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "author": "renerocksai",
   "license": "MIT",
   "description": "Markdown notes in the bar: quick capture, a main window, and sync through your own hub.",

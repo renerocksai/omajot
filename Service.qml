@@ -372,8 +372,10 @@ Item {
       var candidates = []
       if (root.daemonSetting !== "") candidates.push(root.daemonSetting)
       candidates.push(root.pluginPath("zig-out/bin/omajot"))
-      var script = "install=$1; shift; for f in \"$@\"; do if [ -x \"$f\" ]; then echo \"$f\"; exit 0; fi; done; exec sh \"$install\""
-      locate.command = ["sh", "-c", script, "omajot-locate", root.pluginPath("tools/install-release.sh")].concat(candidates)
+      // A found binary is also linked as ~/.local/bin/omajot (tools/link-cli.sh);
+      // install-release.sh links the release binary itself.
+      var script = "install=$1; link=$2; shift 2; for f in \"$@\"; do if [ -x \"$f\" ]; then sh \"$link\" \"$f\" --quiet >/dev/null 2>&1; echo \"$f\"; exit 0; fi; done; exec sh \"$install\""
+      locate.command = ["sh", "-c", script, "omajot-locate", root.pluginPath("tools/install-release.sh"), root.pluginPath("tools/link-cli.sh")].concat(candidates)
       root.daemonState = "installing"
       locate.running = true
     }

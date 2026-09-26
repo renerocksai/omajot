@@ -44,7 +44,11 @@ sha256() {
   else shasum -a 256 "$1" | cut -d' ' -f1; fi
 }
 
+# Put `omajot` on the PATH (~/.local/bin/omajot -> the installed binary).
+link() { sh "$repo/tools/link-cli.sh" "$dest" "${1:-}" || true; }
+
 if [ -x "$dest" ] && [ "$(sha256 "$dest")" = "$want" ]; then
+  link --quiet
   echo "$dest"
   exit 0
 fi
@@ -61,4 +65,5 @@ got=$(sha256 "$tmp")
 chmod +x "$tmp"
 mv -f "$tmp" "$dest"
 trap - EXIT
+link
 echo "$dest"

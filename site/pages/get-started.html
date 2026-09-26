@@ -47,7 +47,7 @@
 <span class="p">$ </span>tools/install-release.sh
 <span class="p">$ </span>tmux new -s omajot-hub
 <span class="p">$ </span>bin/omajot hub --port 8787 --data ~/omajot-data --login you@example.com</code></pre>
-  <p><code>tools/install-release.sh</code> downloads the released binary for this computer from the GitHub release. It checks the SHA-256 of the file against <code>release.json</code>, which is in the repository. Then it installs the binary into <code>bin/omajot</code>. If there is no release yet, <a href="#source">build from source</a>.</p>
+  <p><code>tools/install-release.sh</code> downloads the released binary for this computer from the GitHub release. It checks the SHA-256 of the file against <code>release.json</code>, which is in the repository. Then it installs the binary into <code>bin/omajot</code>. It also links <code>~/.local/bin/omajot</code> to it, so <code>omajot</code> works from any folder (it tells you if <code>~/.local/bin</code> is not on your <code>PATH</code>). If there is no release yet, <a href="#source">build from source</a>.</p>
   <p>On Windows (experimental), download <code>omajot-x86_64-windows.exe</code> from the <a href="https://github.com/renerocksai/omajot/releases">releases</a>. The Windows binary builds on the IOCP backend of bounded/http. We did not run it as a hub yet.</p>
   <p>Replace <code>you@example.com</code> with your Tailscale login name. The Tailscale admin console shows it on the <em>Users</em> page. The hub accepts API requests only from this login.</p>
   <p>The hub listens on <code>127.0.0.1</code> only. It writes all changes to <code>~/omajot-data/batches.jsonl</code> and all images to <code>~/omajot-data/blobs/</code>. Include this folder in your backups.</p>
@@ -164,7 +164,7 @@ WantedBy=default.target</code></pre></li>
   <h2>3 · Install the plugin <span class="badge omarchy">Omarchy only</span></h2>
   <p>Do this step on your Omarchy computer:</p>
 <pre class="cmd"><code><span class="p">$ </span>omarchy plugin add https://github.com/renerocksai/omajot --enable</code></pre>
-  <p>When the plugin starts the first time, it runs <code>tools/install-release.sh</code>. The script downloads the omajot binary for this computer, checks its SHA-256 and installs it into <code>bin/omajot</code>. If the plugin folder has a local build in <code>zig-out/bin/omajot</code>, the plugin uses that build.</p>
+  <p>When the plugin starts the first time, it runs <code>tools/install-release.sh</code>. The script downloads the omajot binary for this computer, checks its SHA-256 and installs it into <code>bin/omajot</code>. If the plugin folder has a local build in <code>zig-out/bin/omajot</code>, the plugin uses that build. The plugin also puts the <code>omajot</code> command on your <code>PATH</code>: it links <code>~/.local/bin/omajot</code> to the binary it uses.</p>
   <p>A note icon appears in the bar. Click it to open the dropdown. Middle-click it to open the main window.</p>
 </section>
 
@@ -192,7 +192,7 @@ WantedBy=default.target</code></pre></li>
 <pre><span class="p">$</span> omajot qr
 {{qr_terminal}}</pre>
   </div>
-  <p class="muted" style="margin-top:14px">Omarchy: the plugin keeps its <code>omajot</code> binary in <code>~/.config/omarchy/plugins/io.github.renerocksai.omajot/bin/</code> (or <code>zig-out/bin/</code> for a local build). Add this folder to your <code>PATH</code>, or use the full path.</p>
+  <p class="muted" style="margin-top:14px">The plugin and <code>tools/install-release.sh</code> link <code>~/.local/bin/omajot</code>, so <code>omajot</code> is on your <code>PATH</code>. They never replace a file or a link that is not from omajot. Set <code>OMAJOT_NO_LINK=1</code> to skip the link.</p>
   <div class="shot">{{shot:desktop-qr:The web app shows its URL as a QR code}}</div>
   <p>Without a hub, every QR view shows these steps instead:</p>
   <div class="note">

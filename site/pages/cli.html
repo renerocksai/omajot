@@ -225,13 +225,14 @@
     <tr><td><code>e</code>, <code>Enter</code></td><td>Opens the note in your text editor, as <a href="#edit"><code>omajot edit</code></a> does.</td></tr>
     <tr><td><code>n</code></td><td>Makes a note: type the title, then the editor opens. The note goes into the folder that you are in.</td></tr>
     <tr><td><code>p</code></td><td>Pins or unpins the note. Pinned notes come first.</td></tr>
-    <tr><td><code>x</code></td><td>Moves the note to the Trash. In the Trash, <code>x</code> restores it.</td></tr>
+    <tr><td><code>x</code></td><td>In the notes or preview column, moves the note to the Trash or restores it. In the sources column, asks to delete the selected folder.</td></tr>
     <tr><td><code>m</code></td><td>Moves the note to a folder that you select.</td></tr>
     <tr><td><code>N</code></td><td>Makes a folder, inside the selected folder.</td></tr>
     <tr><td><code>r</code></td><td>Renames the selected folder.</td></tr>
     <tr><td><code>?</code></td><td>Shows all keys.</td></tr>
     <tr><td><code>q</code></td><td>Quits.</td></tr>
   </table></div>
+  <p><strong>Deleting a folder.</strong> Select it in the left column (<code>h</code>), then press <code>x</code>. The confirmation names the folder and defaults to <em>Cancel</em>: press <code>Tab</code> to select <em>Delete</em>, then <code>Enter</code>, or press <code>y</code>. <code>Esc</code> or <code>n</code> cancels; you can also click either button. Its notes move to <em>Notes</em> and its subfolders move up one level. No note is deleted. Afterwards the TUI shows <em>All notes</em>. Deletion pauses below 40 × 11 cells: resize the terminal or cancel with <code>Esc</code>.</p>
   <p><strong>Mouse.</strong> Click a folder, tag or note to select it. Click a note twice to open it in the editor. In the note, click a checkbox to tick it, or a link to open it. Web and mail links open at once. A link to a local file (<code>file://</code>) opens after you confirm, and only if the file or folder exists on this computer and is no program. The wheel moves through the lists and scrolls the note. The pointer changes to a hand over things you can click. To select text with the mouse, hold <kbd>Shift</kbd>. <code>--no-mouse</code> turns the mouse off.</p>
   <p><strong>Editing.</strong> The TUI gives the terminal to your editor (<code>$VISUAL</code>, else <code>$EDITOR</code>, else <code>vi</code>) and comes back when the editor closes. Each save goes into the note at once. When the note also changes on another device while you edit, omajot keeps both changes and the status bar says <em>Saved and merged</em>. The Omarchy plugin and the web app can have the same note open at the same time.</p>
   <p><strong>Pictures</strong> show in terminals with the Kitty graphics protocol (Kitty, Ghostty, WezTerm). Other terminals show a line with the name of the picture. <strong>Colours</strong> come from the current Omarchy theme, else from a built-in dark theme. Set <code>NO_COLOR</code> to use the colours of your terminal. The icons need a <a href="https://www.nerdfonts.com/">Nerd Font</a>, as in Omarchy.</p>

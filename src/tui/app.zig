@@ -87,14 +87,17 @@ const Areas = struct {
     picker_top: usize = 0,
     /// The confirmation box and its buttons.
     confirm_box: Rect = .{},
-    confirm_open: Rect = .{},
+    confirm_accept: Rect = .{},
     confirm_cancel: Rect = .{},
 };
 
 /// Two clicks on the same note within this time open it in the editor.
 const double_click_ms = 400;
+/// libvaxis measures widths in u16; folder paths have no length limit.
+const confirm_display_bytes = 256;
 const Mode = enum { browse, search, prompt, picker, help, confirm };
 const Prompt = enum { new_note, new_folder, rename_folder };
+const Confirm = enum { open_file, delete_folder };
 const Tone = enum { info, ok, warn };
 
 pub const App = struct {
@@ -150,6 +153,11 @@ pub const App = struct {
     last_click: struct { ms: i64 = 0, note: usize = std.math.maxInt(usize) } = .{},
     /// A local file a link asks to open, waiting for the confirmation.
     confirm_path: std.ArrayList(u8) = .empty,
+    confirm: Confirm = .open_file,
+    confirm_accept: bool = true,
+    /// Captured in picker_arena: live refresh must not retarget a deletion.
+    confirm_folder: []const u8 = "",
+    confirm_name: []const u8 = "",
     pointer: bool = false,
 
     message: []const u8 = "",
@@ -170,6 +178,7 @@ pub const App = struct {
         app.input.deinit(app.gpa);
         app.preview_id.deinit(app.gpa);
         app.preview_text.deinit(app.gpa);
+        app.confirm_path.deinit(app.gpa);
         app.list_arena.deinit();
         app.view_arena.deinit();
         app.search_arena.deinit();
@@ -401,8 +410,19 @@ pub const App = struct {
             .prompt => return app.promptKey(k),
             .picker => return app.pickerKey(k),
             .confirm => {
-                if (k.matches(vaxis.Key.enter, .{}) or k.matches('y', .{}) or k.matches('o', .{})) return app.confirmOpen();
-                if (k.matches(vaxis.Key.escape, .{}) or k.matches('n', .{}) or k.matches('q', .{})) app.mode = .browse;
+                if (k.matches(vaxis.Key.escape, .{}) or k.matches('n', .{}) or k.matches('q', .{})) {
+                    app.mode = .browse;
+                } else if (k.matches(vaxis.Key.enter, .{})) {
+                    if (app.confirm_accept) try app.confirmAction() else app.mode = .browse;
+                } else if (k.matches('y', .{}) or (app.confirm == .open_file and k.matches('o', .{}))) {
+                    try app.confirmAction();
+                } else if (k.matches(vaxis.Key.tab, .{}) or k.matches(vaxis.Key.tab, .{ .shift = true })) {
+                    app.confirm_accept = !app.confirm_accept;
+                } else if (k.matches(vaxis.Key.left, .{})) {
+                    app.confirm_accept = true;
+                } else if (k.matches(vaxis.Key.right, .{})) {
+                    app.confirm_accept = false;
+                }
                 return;
             },
             .browse => {},
@@ -470,14 +490,29 @@ pub const App = struct {
                 app.say(.ok, "{s} \u{201c}{s}\u{201d}", .{ if (n.pinned) "Unpinned" else "Pinned", title(n.title) });
                 try app.refresh();
             },
-            .trash => if (app.selected()) |n| {
-                _ = app.call(app.scratch.allocator(), "set", .{ .note = n.id, .trashed = !n.trashed }) catch return;
-                if (n.trashed) {
-                    app.say(.ok, "Restored \u{201c}{s}\u{201d}", .{title(n.title)});
-                } else {
-                    app.say(.ok, "Moved \u{201c}{s}\u{201d} to the Trash. In the Trash, x restores it.", .{title(n.title)});
+            .trash => {
+                if (app.focus == .sources) {
+                    const s = app.currentSource();
+                    if (s.kind != .folder) {
+                        app.say(.info, "Select a folder in the left column, then press x to delete it.", .{});
+                        return;
+                    }
+                    _ = app.picker_arena.reset(.retain_capacity);
+                    const a = app.picker_arena.allocator();
+                    app.confirm_folder = try a.dupe(u8, s.id);
+                    app.confirm_name = try app.store.folderPath(a, s.id);
+                    app.confirm = .delete_folder;
+                    app.confirm_accept = false;
+                    app.mode = .confirm;
+                } else if (app.selected()) |n| {
+                    _ = app.call(app.scratch.allocator(), "set", .{ .note = n.id, .trashed = !n.trashed }) catch return;
+                    if (n.trashed) {
+                        app.say(.ok, "Restored \u{201c}{s}\u{201d}", .{title(n.title)});
+                    } else {
+                        app.say(.ok, "Moved \u{201c}{s}\u{201d} to the Trash. In the Trash, x restores it.", .{title(n.title)});
+                    }
+                    try app.refresh();
                 }
-                try app.refresh();
             },
             .move => if (app.selected()) |n| {
                 _ = app.picker_arena.reset(.retain_capacity);
@@ -517,8 +552,8 @@ pub const App = struct {
             .prompt => return false,
             .confirm => {
                 if (m.button != .left) return false;
-                if (app.areas.confirm_open.at(col, row) != null) {
-                    app.confirmOpen();
+                if (app.areas.confirm_accept.at(col, row) != null) {
+                    try app.confirmAction();
                 } else if (app.areas.confirm_cancel.at(col, row) != null or app.areas.confirm_box.at(col, row) == null) {
                     app.mode = .browse;
                 }
@@ -615,7 +650,7 @@ pub const App = struct {
     fn clickable(app: *App, col: i32, row: i32) bool {
         switch (app.mode) {
             .picker => return app.areas.picker.at(col, row) != null,
-            .confirm => return app.areas.confirm_open.at(col, row) != null or app.areas.confirm_cancel.at(col, row) != null,
+            .confirm => return app.areas.confirm_accept.at(col, row) != null or app.areas.confirm_cancel.at(col, row) != null,
             .browse, .search => {},
             .help, .prompt => return false,
         }
@@ -677,12 +712,39 @@ pub const App = struct {
         }
         app.confirm_path.clearRetainingCapacity();
         app.confirm_path.appendSlice(app.gpa, path) catch return;
+        app.confirm = .open_file;
+        app.confirm_accept = true;
         app.mode = .confirm;
     }
 
-    fn confirmOpen(app: *App) void {
+    /// Keep deletion paused when the terminal cannot show its consequences
+    /// and both buttons, including after a resize with Delete selected.
+    fn folderConfirmationFits(app: *App) bool {
+        const win = app.vx.window();
+        return win.width >= 40 and win.height >= 11;
+    }
+
+    fn confirmAction(app: *App) !void {
+        if (app.confirm == .delete_folder and !app.folderConfirmationFits()) {
+            app.say(.warn, "Resize to 40x11 to delete a folder. Esc cancels.", .{});
+            return;
+        }
         app.mode = .browse;
-        if (app.launch(app.confirm_path.items)) app.say(.info, "Opened {s}", .{app.confirm_path.items});
+        switch (app.confirm) {
+            .open_file => if (app.launch(app.confirm_path.items)) {
+                app.say(.info, "Opened {s}", .{app.confirm_path.items});
+            },
+            .delete_folder => {
+                _ = app.call(app.scratch.allocator(), "folder.delete", .{ .folder = app.confirm_folder }) catch return;
+                app.src = 0;
+                app.src_top = 0;
+                app.note = 0;
+                app.list_top = 0;
+                app.scroll = 0;
+                try app.refresh();
+                app.say(.ok, "Deleted the folder \u{201c}{s}\u{201d}. No note was deleted.", .{app.confirm_name});
+            },
+        }
     }
 
     /// Hand a URL or path to the desktop's opener (xdg-open, macOS open).
@@ -1203,32 +1265,56 @@ pub const App = struct {
 
     fn drawConfirm(app: *App, win: vaxis.Window) void {
         const t = app.theme;
-        const path = app.confirm_path.items;
-        const width: u16 = @intCast(@min(@max(win.gwidth(path) + 6, 46), win.width -| 4));
-        const inner = app.box(win, width, 7, " Open a file from the note? ");
+        const deleting = app.confirm == .delete_folder;
+        if (deleting and !app.folderConfirmationFits()) {
+            win.fill(.{ .style = app.st(t.fg, t.bg_side) });
+            _ = win.print(&.{.{ .text = "Resize to 40x11.\nEsc cancels.", .style = app.st(t.fg, t.bg_side) }}, .{});
+            app.areas.confirm_box = .of(win);
+            return;
+        }
+        const full_name = if (deleting) app.confirm_name else app.confirm_path.items;
+        var name = full_name;
+        if (name.len > confirm_display_bytes) {
+            var cut = name.len - confirm_display_bytes;
+            while (cut < name.len and name[cut] & 0xC0 == 0x80) cut += 1;
+            name = name[cut..];
+        }
+        const width: u16 = @intCast(@min(@max(win.gwidth(name) +| 6, if (deleting) @as(u16, 64) else 46), win.width -| 4));
+        const inner = app.box(win, width, if (deleting) 10 else 7, if (deleting) " Delete folder? " else " Open a file from the note? ");
         // The whole box, border included: a click outside it cancels.
         app.areas.confirm_box = .{ .x = @as(i32, inner.x_off) - 2, .y = @as(i32, inner.y_off) - 1, .w = inner.width + 4, .h = inner.height + 2 };
         // The end of a long path matters most: show that.
-        var shown: []const u8 = path;
-        while (shown.len > 0 and inner.gwidth(shown) + 2 > inner.width) {
+        var shown: []const u8 = name;
+        while (shown.len > 0 and inner.gwidth(shown) +| 2 > inner.width) {
             var cut: usize = 1;
             while (cut < shown.len and shown[cut] & 0xC0 == 0x80) cut += 1;
             shown = shown[cut..];
         }
         _ = inner.child(.{ .y_off = 1, .height = 1 }).print(&.{
-            .{ .text = if (shown.len < path.len) "…" else "", .style = app.st(t.muted, t.bg_side) },
+            .{ .text = if (shown.len < full_name.len) "…" else "", .style = app.st(t.muted, t.bg_side) },
             .{ .text = shown, .style = app.st(t.fg, t.bg_side) },
         }, .{ .wrap = .none });
-        const buttons = inner.child(.{ .y_off = 3, .height = 1 });
-        const open = buttons.child(.{ .width = 10 });
-        var open_st = app.selStyle(app.st(t.fg, t.bg_side));
-        open_st.bold = true;
-        open.fill(.{ .style = open_st });
-        _ = open.print(&.{.{ .text = "  Open  ", .style = open_st }}, .{ .wrap = .none });
+        if (deleting) {
+            _ = inner.child(.{ .y_off = 3, .height = 3 }).print(&.{.{
+                .text = "Its notes move to Notes.\nSubfolders move up one level. No note is deleted.",
+                .style = app.st(t.fg, t.bg_side),
+            }}, .{});
+        }
+        const buttons = inner.child(.{ .y_off = if (deleting) 6 else 3, .height = 1 });
+        const accept = buttons.child(.{ .width = 10 });
+        var accept_st = app.st(t.fg, t.bg_side);
+        if (app.confirm_accept) accept_st = app.selStyle(accept_st);
+        accept_st.bold = app.confirm_accept;
+        accept.fill(.{ .style = accept_st });
+        _ = accept.print(&.{.{ .text = if (deleting) "  Delete" else "  Open  ", .style = accept_st }}, .{ .wrap = .none });
         const cancel = buttons.child(.{ .x_off = 12, .width = 10 });
-        _ = cancel.print(&.{.{ .text = "  Cancel", .style = app.st(t.fg, t.bg_side) }}, .{ .wrap = .none });
-        _ = buttons.child(.{ .x_off = 24 }).print(&.{.{ .text = "Enter · Esc", .style = app.st(t.muted, t.bg_side) }}, .{ .wrap = .none });
-        app.areas.confirm_open = .of(open);
+        var cancel_st = app.st(t.fg, t.bg_side);
+        if (!app.confirm_accept) cancel_st = app.selStyle(cancel_st);
+        cancel_st.bold = !app.confirm_accept;
+        cancel.fill(.{ .style = cancel_st });
+        _ = cancel.print(&.{.{ .text = "  Cancel", .style = cancel_st }}, .{ .wrap = .none });
+        _ = buttons.child(.{ .x_off = 24 }).print(&.{.{ .text = "Tab · Enter · Esc", .style = app.st(t.muted, t.bg_side) }}, .{ .wrap = .none });
+        app.areas.confirm_accept = .of(accept);
         app.areas.confirm_cancel = .of(cancel);
     }
 
@@ -1328,7 +1414,7 @@ pub const App = struct {
             .ok => t.ok,
             .warn => t.warn,
         };
-        const left = bar.print(&.{
+        var status_segments = [_]vaxis.Segment{
             .{ .text = " ", .style = bs },
             .{ .text = sync.dot, .style = app.st(sync.color, t.bg_side) },
             .{ .text = " ", .style = bs },
@@ -1336,14 +1422,34 @@ pub const App = struct {
             .{ .text = count, .style = bs },
             .{ .text = "   ", .style = bs },
             .{ .text = app.message, .style = app.st(tone_color, t.bg_side) },
-        }, .{ .wrap = .none });
+        };
+        // wrap=none stops at a cell's start, so a wide final grapheme can
+        // cross the terminal's right edge and scroll the whole screen.
+        var remaining = bar.width;
+        for (&status_segments) |*segment| {
+            var end: usize = 0;
+            var iter = vaxis.unicode.graphemeIterator(segment.text);
+            while (iter.next()) |grapheme| {
+                const text = grapheme.bytes(segment.text);
+                if (std.mem.eql(u8, text, "\n")) break;
+                const width = bar.gwidth(text);
+                if (width > remaining) break;
+                remaining -= width;
+                end = grapheme.start + grapheme.len;
+            }
+            segment.text = segment.text[0..end];
+        }
+        const left = bar.print(&status_segments, .{ .wrap = .none });
         const hints = switch (app.mode) {
-            .browse => "? help · / search · n new · e edit · p pin · x trash · m move · q quit",
+            .browse => if (app.focus == .sources)
+                "? help · / search · N folder · r rename · x delete folder · q quit"
+            else
+                "? help · / search · n new · e edit · p pin · x trash · m move · q quit",
             .search => "type to search · Enter keep · Esc clear",
             .prompt => "Enter ok · Esc cancel",
             .picker => "j/k choose · Enter move · Esc cancel",
             .help => "any key closes",
-            .confirm => "Enter / y open · Esc / n cancel",
+            .confirm => if (app.confirm == .delete_folder) "Tab choose · Enter confirm · y delete · Esc / n cancel" else "Tab choose · Enter confirm · y open · Esc / n cancel",
         };
         const hw: u16 = bar.gwidth(hints) + 1;
         if (left.row == 0 and !left.overflow and left.col + 2 + hw <= bar.width)

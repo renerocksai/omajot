@@ -30,12 +30,17 @@ pub const help =
     \\  e  Enter        Edit the note in $VISUAL or $EDITOR (else vi)
     \\  n               New note (asks for the title, then opens the editor)
     \\  p               Pin / unpin
-    \\  x               Move to the Trash / restore from the Trash
+    \\  x               Notes/preview: Trash / restore; sources: delete folder
     \\  m               Move the note to a folder
     \\  N               New folder (inside the selected folder)
     \\  r               Rename the selected folder
     \\  ?               All keys
     \\  q               Quit
+    \\
+    \\Folder deletion asks first and defaults to Cancel. Tab selects Delete,
+    \\Enter confirms; y deletes, Esc or n cancels. Notes move to Notes and
+    \\subfolders move up one level. No note is deleted.
+    \\Deletion pauses below 40 x 11 cells: resize or cancel with Esc.
     \\
     \\Mouse: click a folder, tag or note to select it; double-click a note to
     \\edit it; click a checkbox in the note to tick it, or a link to open it.

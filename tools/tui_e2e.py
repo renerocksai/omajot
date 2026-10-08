@@ -12,7 +12,7 @@ used. $EDITOR is a fake editor that takes an argument.
 
 Checks: layout and row widths, navigation, server-side search, a new note
 through the editor, an edit while `omajot write` changes the same note (both
-survive), pin, Trash and restore, move to a folder, new and renamed folder,
+survive), pin, Trash and restore, move to a folder, new, renamed and deleted folder,
 live refresh (a CLI note, a note from device B), the help overlay, resize,
 and that `q`, a panic and SIGTERM all give the terminal back (`stty -a`).
 
@@ -72,13 +72,14 @@ class Env:
         self.plan = os.path.join(tmp, "plan.json")
         self.editor = os.path.join(tmp, "fake_editor.py")
         open(self.editor, "w").write(FAKE_EDITOR)
-        # A link click runs xdg-open: this one only notes what it would open.
+        # Intercept the platform opener: never open real apps during the test.
         self.bin_dir = os.path.join(tmp, "fakebin")
         self.opened = os.path.join(tmp, "opened.txt")
         os.makedirs(self.bin_dir)
-        opener = os.path.join(self.bin_dir, "xdg-open")
-        open(opener, "w").write(f'#!/bin/sh\necho "$1" >> "{self.opened}"\n')
-        os.chmod(opener, 0o755)
+        for name in ("xdg-open", "open"):
+            opener = os.path.join(self.bin_dir, name)
+            open(opener, "w").write(f'#!/bin/sh\necho "$1" >> "{self.opened}"\n')
+            os.chmod(opener, 0o755)
 
     def call(self, cmd, **fields):
         """One request on the daemon socket (what the TUI talks to)."""
@@ -419,6 +420,134 @@ def main():
         names = [f["name"] for f in e.call("list")["folders"]]
         assert "Renamed folder" in names and "Scratch folder" not in names, names
         ok("N makes a folder, r renames it")
+
+        # -------------------------------------------------- delete a folder, not its notes
+        target = next(f["id"] for f in e.call("list")["folders"] if f["name"] == "Renamed folder")
+        parent = e.call("folder.create", name="Parent folder", parent=None)["folder"]
+        e.call("folder.move", folder=target, parent=parent)
+        child = e.call("folder.create", name="Child folder", parent=target)["folder"]
+        grandchild = e.call("folder.create", name="Grandchild folder", parent=child)["folder"]
+        direct = e.call("create", folder=target, text="Folder note\n\nKeep this text\n")["note"]
+        trashed = e.call("create", folder=target, text="Trashed folder note\n\nKeep this too\n")["note"]
+        e.call("set", note=trashed, trashed=True)
+        nested = e.call("create", folder=child, text="Child note\n\nStill in its folder\n")["note"]
+        before = e.call("list")
+        texts = {n: e.call("read", note=n)["text"] for n in (direct, trashed, nested)}
+        e.wait_screen("Child folder", "folder contents refreshed")
+        e.keys("x")
+        e.wait_screen("Delete folder?", "folder deletion asks first")
+        assert "Parent folder/Renamed folder" in e.screen(), "confirmation names the selected folder"
+        assert e.call("list") == before, "opening the confirmation changed data"
+        e.tmux("resize-window", "-t", "tui", "-x", "60", "-y", "20")
+        s = e.wait_screen(lambda s: "Delete folder?" in s and "No note is deleted." in s and
+                          "Cancel" in s and all(cells(r) == 60 for r in rows(s)[:19]),
+                          "folder confirmation fits a narrow terminal")
+        # Even with Delete selected, shrinking below the dialog's usable size
+        # must pause the action rather than permit an unseen confirmation.
+        e.keys("Tab")
+        e.tmux("resize-window", "-t", "tui", "-x", "20", "-y", "3")
+        e.wait_screen("Resize to 40x11.", "small terminal pauses folder deletion")
+        e.keys("Enter")
+        e.wait_screen("Resize to 40x11.", "Enter cannot accept an unseen folder confirmation")
+        assert e.call("list") == before, "small terminal allowed an unseen deletion"
+        e.tmux("resize-window", "-t", "tui", "-x", str(W), "-y", str(H))
+        e.wait_screen(lambda s: "Delete folder?" in s and cells(rows(s)[0]) == W, "confirmation back to full size")
+        e.keys("Escape")
+        e.wait_screen(lambda s: "Delete folder?" not in s, "Esc cancels folder deletion")
+        e.keys("x", "Enter")
+        e.wait_screen(lambda s: "Delete folder?" not in s, "Enter defaults to Cancel")
+        assert e.call("list") == before, "cancelling changed data"
+
+        # Refresh and reordering while the dialog is open must not change its target.
+        e.keys("x")
+        e.wait_screen("Delete folder?", "asks again")
+        e.call("folder.rename", folder=target, name="Renamed elsewhere")
+        extra = e.call("folder.create", name="AAA refresh", parent=None)["folder"]
+        e.wait_screen("AAA refresh", "live refresh while the confirmation is open")
+        assert "Parent folder/Renamed folder" in e.screen(), "confirmation lost its captured name"
+        e.keys("Tab", "Enter")
+        e.wait_screen("Deleted the folder", "Tab selects Delete, Enter confirms")
+        assert "All notes · " in rows(e.screen())[0], "deletion left a stale folder view"
+        after = e.call("list")
+        folders = {f["id"]: f for f in after["folders"]}
+        assert target not in folders and extra in folders
+        assert folders[child]["parent"] == parent and folders[grandchild]["parent"] == child
+        notes = {n["id"]: n for n in after["notes"]}
+        for n in before["notes"]:
+            expected = dict(n, folder=None) if n["folder"] == target else n
+            assert notes[n["id"]] == expected, (notes[n["id"]], expected)
+        for n, text in texts.items():
+            assert e.call("read", note=n)["text"] == text
+        wait_for(lambda: target not in {f["id"] for f in b.call("list")["folders"]} and
+                 any(f["id"] == child and f["parent"] == parent for f in b.call("list")["folders"]),
+                 "folder deletion syncs to device B")
+        ok("x in sources: cancel by default; captured folder deleted, notes and descendants preserved, synced")
+
+        # Built-in sources must never accidentally trash the selected note.
+        before = e.call("list")
+        e.keys("g", "x")
+        assert e.call("list") == before, "x on All notes trashed a note"
+        e.wait_screen("Select a folder", "built-in source explains how to delete a folder")
+
+        # The mouse can cancel and confirm the same dialog, including an empty folder.
+        e.keys("N")
+        e.wait_screen("New folder", "empty folder prompt")
+        e.text("Empty folder")
+        e.keys("Enter")
+        e.wait_screen("Made the folder “Empty folder”", "empty folder made")
+        empty = next(f["id"] for f in e.call("list")["folders"] if f["name"] == "Empty folder")
+        e.keys("x")
+        s = e.wait_screen("Delete folder?", "empty folder confirmation")
+        r, line = next((r, line) for r, line in enumerate(rows(s)) if "Cancel" in line and "Delete" in line)
+        e.click(cells(line[:line.index("Cancel")]), r)
+        e.wait_screen(lambda s: "Delete folder?" not in s, "mouse cancels")
+        assert empty in {f["id"] for f in e.call("list")["folders"]}
+        e.keys("x")
+        s = e.wait_screen("Delete folder?", "empty folder asks again")
+        r, line = next((r, line) for r, line in enumerate(rows(s)) if "Cancel" in line and "Delete" in line)
+        e.click(cells(line[:line.index("Delete")]), r)
+        e.wait_screen("Deleted the folder “Empty folder”", "mouse confirms deletion")
+        assert empty not in {f["id"] for f in e.call("list")["folders"]}
+        ok("x on built-in sources changes nothing; mouse cancels and deletes an empty folder")
+
+        # If another device deletes the target, confirmation must not delete
+        # whichever source now occupies its row, or report a false success.
+        e.keys("N")
+        e.wait_screen("New folder", "stale target prompt")
+        e.text("Gone elsewhere")
+        e.keys("Enter")
+        e.wait_screen("Made the folder “Gone elsewhere”", "stale target made")
+        gone = next(f["id"] for f in e.call("list")["folders"] if f["name"] == "Gone elsewhere")
+        e.keys("x")
+        e.wait_screen("Delete folder?", "stale target confirmation")
+        e.call("folder.delete", folder=gone)
+        e.call("folder.create", name="Another refresh", parent=None)
+        e.wait_screen("Another refresh", "target deleted during live refresh")
+        before = e.call("list")
+        e.keys("y")
+        e.wait_screen("unknown folder", "stale target refusal")
+        assert e.call("list") == before, "stale confirmation deleted another folder or note"
+        assert "Deleted the folder" not in status(e.screen()), "false deletion success"
+        ok("y on a remotely deleted target reports the refusal without changing another source")
+
+        # A legal folder path can exceed libvaxis's u16 display-width range.
+        # Only the displayed suffix may be shortened, never the deletion ID.
+        long_parent = e.call("folder.create", name="🌱" * 32770, parent=None)["folder"]
+        long_target = e.call("folder.create", name="Display tail 🌱", parent=long_parent)["folder"]
+        folders = folder_order(e.call("list")["folders"])
+        idx = [f["id"] for f in folders].index(long_target)
+        e.keys("g", *["j"] * (3 + idx), "x")
+        s = e.wait_screen(lambda s: "Delete folder?" in s and "Display tail 🌱" in s,
+                          "oversized folder path shows a valid display suffix")
+        assert "…" in s, "long path has no truncation indicator"
+        e.keys("y")
+        s = e.wait_screen("Deleted the folder", "oversized path confirms without a panic")
+        assert "Deleted the folder" in status(s), "wide deletion status scrolled the screen"
+        assert rows(s)[0].startswith("╭") and all(cells(r) == W for r in rows(s)[:H - 1]), \
+            "wide deletion status corrupted the layout"
+        ids = {f["id"] for f in e.call("list")["folders"]}
+        assert long_target not in ids and long_parent in ids, "truncated path changed the deletion target"
+        ok("an oversized Unicode folder path displays a suffix and deletes only the captured ID")
 
         # -------------------------------------------------- live refresh
         e.keys("g", "l")
